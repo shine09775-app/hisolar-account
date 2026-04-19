@@ -32,113 +32,298 @@
       </a>
     </div>
 
-    <!-- Summary Cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">รายรับรวม</p>
-        <p id="card-income" class="text-2xl font-bold text-green-600">—</p>
-      </div>
-      <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">รายจ่ายรวม</p>
-        <p id="card-expense" class="text-2xl font-bold text-red-500">—</p>
-      </div>
-      <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">คงเหลือสุทธิ</p>
-        <p id="card-balance" class="text-2xl font-bold text-gray-800">—</p>
-      </div>
-      <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">จำนวนรายการ</p>
-        <p id="card-count" class="text-2xl font-bold text-indigo-600">—</p>
-      </div>
+    <!-- Tab Navigation -->
+    <div class="flex gap-2 border-b border-gray-200">
+      <button data-tab="overview"
+        class="tab-btn px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-colors border-b-2 border-yellow-400 text-yellow-600 bg-white">
+        ภาพรวม 12 เดือน
+      </button>
+      <button data-tab="transfers"
+        class="tab-btn px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-colors border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50">
+        โอนระหว่างบัญชี
+      </button>
     </div>
 
-    <!-- Filter Form -->
-    <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-      <form id="filter-form" class="flex flex-wrap gap-3 items-end">
-        <div>
-          <label class="block text-xs text-gray-500 mb-1">บัญชี</label>
-          <select id="filter-account" name="account"
-            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs text-gray-500 mb-1">หมวดหมู่</label>
-          <select id="filter-category" name="category"
-            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs text-gray-500 mb-1">ตั้งแต่วันที่</label>
-          <input type="date" name="date-from"
-            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
-        </div>
-        <div>
-          <label class="block text-xs text-gray-500 mb-1">ถึงวันที่</label>
-          <input type="date" name="date-to"
-            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
-        </div>
-        <div>
-          <label class="block text-xs text-gray-500 mb-1">ค้นหารายละเอียด</label>
-          <input type="text" name="search" placeholder="ค้นหา..."
-            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm w-40 focus:outline-none focus:ring-2 focus:ring-yellow-400">
-        </div>
-        <button type="submit"
-          class="px-4 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white text-sm font-semibold rounded-lg transition-colors">
-          ค้นหา
-        </button>
-        <button type="button" id="filter-reset"
-          class="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-lg transition-colors">
-          รีเซ็ต
-        </button>
-      </form>
-    </div>
+    <!-- ===== TAB: ภาพรวม ===== -->
+    <div id="tab-overview" class="space-y-6">
 
-    <!-- Charts Row -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-        <h2 class="font-semibold text-gray-700 mb-4">รายรับ / รายจ่าย รายเดือน</h2>
-        <canvas id="chart-monthly" height="120"></canvas>
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">รายรับรวม</p>
+          <p id="card-income" class="text-2xl font-bold text-green-600">—</p>
+        </div>
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">รายจ่ายรวม</p>
+          <p id="card-expense" class="text-2xl font-bold text-red-500">—</p>
+        </div>
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">คงเหลือสุทธิ</p>
+          <p id="card-balance" class="text-2xl font-bold text-gray-800">—</p>
+        </div>
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">จำนวนรายการ</p>
+          <p id="card-count" class="text-2xl font-bold text-indigo-600">—</p>
+        </div>
       </div>
+
+      <!-- Filter Form -->
       <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-        <h2 class="font-semibold text-gray-700 mb-4">รายจ่ายตามหมวดหมู่</h2>
-        <canvas id="chart-category"></canvas>
+        <form id="filter-form" class="flex flex-wrap gap-3 items-end">
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">บัญชี</label>
+            <select id="filter-account" name="account"
+              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">หมวดหมู่</label>
+            <select id="filter-category" name="category"
+              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">ตั้งแต่วันที่</label>
+            <input type="date" name="date-from"
+              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">ถึงวันที่</label>
+            <input type="date" name="date-to"
+              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">ค้นหารายละเอียด</label>
+            <input type="text" name="search" placeholder="ค้นหา..."
+              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm w-40 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+          </div>
+          <button type="submit"
+            class="px-4 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white text-sm font-semibold rounded-lg transition-colors">
+            ค้นหา
+          </button>
+          <button type="button" id="filter-reset"
+            class="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-lg transition-colors">
+            รีเซ็ต
+          </button>
+        </form>
       </div>
-    </div>
 
-    <!-- Transaction Table -->
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-        <h2 class="font-semibold text-gray-700">รายการธุรกรรม</h2>
-        <span id="tx-count" class="text-xs text-gray-400"></span>
+      <!-- Charts Row: Monthly Bar (2/3) + 2 Pie Charts stacked (1/3) -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        <!-- Monthly Bar + Summary Table -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <h2 class="font-semibold text-gray-700 mb-4">รายรับ / รายจ่าย รายเดือน</h2>
+          <canvas id="chart-monthly" height="140"></canvas>
+          <div id="monthly-summary-table"></div>
+        </div>
+
+        <!-- Right: 2 Pie Charts stacked -->
+        <div class="flex flex-col gap-4">
+
+          <!-- Expense by Supplier Group -->
+          <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm flex-1">
+            <h2 class="font-semibold text-gray-700 mb-2 text-sm">ค่าใช้จ่ายแยกกลุ่ม Supplier</h2>
+            <canvas id="chart-expense-group"></canvas>
+          </div>
+
+          <!-- Income by Customer -->
+          <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm flex-1">
+            <h2 class="font-semibold text-gray-700 mb-2 text-sm">รายรับแยกตามลูกค้า</h2>
+            <canvas id="chart-income-customer"></canvas>
+          </div>
+
+        </div>
       </div>
-      <div class="overflow-x-auto">
-        <table class="min-w-full text-sm">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">วันที่</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">บัญชี</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">หมวดหมู่</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">รายละเอียด</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">จำนวนเงิน</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">ไฟล์ต้นทาง</th>
-            </tr>
-          </thead>
-          <tbody id="tx-tbody">
-            <tr><td colspan="6" class="text-center py-12 text-gray-400">กำลังโหลด...</td></tr>
-          </tbody>
-        </table>
+
+      <!-- Transaction Table -->
+      <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 class="font-semibold text-gray-700">รายการธุรกรรม</h2>
+          <span id="tx-count" class="text-xs text-gray-400"></span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">วันที่</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">บัญชี</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">หมวดหมู่ / บัญชีคู่ค้า</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">รายละเอียด</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">รายรับ</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">รายจ่าย</th>
+              </tr>
+            </thead>
+            <tbody id="tx-tbody">
+              <tr><td colspan="6" class="text-center py-12 text-gray-400">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+
+    </div><!-- end tab-overview -->
+
+    <!-- ===== TAB: โอนระหว่างบัญชี ===== -->
+    <div id="tab-transfers" class="hidden space-y-6">
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Left: Transfer Table -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div class="px-5 py-4 border-b border-gray-100">
+            <h2 class="font-semibold text-gray-800">รายการโอนระหว่างบัญชีคู่ ↔ บัญชีหลัก</h2>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="bg-slate-700 text-white">
+                <tr>
+                  <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">วันที่</th>
+                  <th class="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide">ทิศทาง</th>
+                  <th class="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide">จำนวน (บาท)</th>
+                  <th class="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wide">สถานะ</th>
+                </tr>
+              </thead>
+              <tbody id="transfer-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Right: Summary Cards + Pie -->
+        <div class="flex flex-col gap-4">
+          <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">รวมโอน คู่→หลัก</p>
+            <p id="tr-total-pair-to-main" class="text-2xl font-bold text-purple-600">—</p>
+            <p class="text-xs text-gray-400 mt-1">บาท</p>
+          </div>
+          <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">รวมรับ หลัก→คู่</p>
+            <p id="tr-total-main-to-pair" class="text-2xl font-bold text-teal-500">—</p>
+            <p class="text-xs text-gray-400 mt-1">บาท</p>
+          </div>
+          <div class="bg-amber-50 rounded-2xl border border-amber-200 p-5 shadow-sm">
+            <p class="text-xs text-amber-600 uppercase tracking-wide mb-1 font-semibold">⚠ รอยืนยัน</p>
+            <p id="tr-total-pending" class="text-2xl font-bold text-amber-600">—</p>
+            <p class="text-xs text-amber-500 mt-1">บาท</p>
+          </div>
+          <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+            <p class="text-xs text-gray-500 font-semibold mb-3">สัดส่วนการโอน</p>
+            <canvas id="chart-transfers"></canvas>
+            <div id="tr-legend" class="mt-3 space-y-1 text-xs text-gray-500"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end tab-transfers -->
 
   </main>
 
   <script src="js/config.js"></script>
+  <script src="js/mappings.js"></script>
   <script src="js/dashboard.js"></script>
   <script>
+    // ---- Transfer data ----
+    const TRANSFER_DATA = [
+      { date: '2025-07-29', direction: 'คู่→หลัก', amount: 9765,    status: 'confirmed' },
+      { date: '2025-08-07', direction: 'คู่→หลัก', amount: 27940,   status: 'confirmed' },
+      { date: '2025-09-17', direction: 'คู่→หลัก', amount: 92000,   status: 'confirmed' },
+      { date: '2025-09-29', direction: 'คู่→หลัก', amount: 6513,    status: 'confirmed' },
+      { date: '2025-10-28', direction: 'คู่→หลัก', amount: 400000,  status: 'confirmed' },
+      { date: '2025-12-09', direction: 'คู่→หลัก', amount: 100000,  status: 'pending'   },
+      { date: '2025-12-22', direction: 'คู่→หลัก', amount: 100000,  status: 'pending'   },
+      { date: '2026-01-01', direction: 'คู่→หลัก', amount: 1700000, status: 'confirmed' },
+      { date: '2026-02-10', direction: 'คู่→หลัก', amount: 40000,   status: 'pending'   },
+      { date: '2025-05-30', direction: 'หลัก→คู่', amount: 50000,   status: 'review'    },
+      { date: '2025-06-13', direction: 'หลัก→คู่', amount: 50000,   status: 'review'    },
+      { date: '2026-03-17', direction: 'หลัก→คู่', amount: 40000,   status: 'confirmed' },
+    ]
+
+    function renderTransferTab() {
+      const tbody = document.getElementById('transfer-tbody')
+      const sorted = [...TRANSFER_DATA].sort((a, b) => a.date.localeCompare(b.date))
+
+      tbody.innerHTML = sorted.map(r => {
+        const dirColor = r.direction === 'คู่→หลัก' ? 'text-purple-700 font-semibold' : 'text-teal-600 font-semibold'
+        const amtColor = r.direction === 'คู่→หลัก' ? 'text-purple-700' : 'text-teal-600'
+        const isLarge  = r.amount >= 1000000
+        let badge
+        if (r.status === 'confirmed') {
+          badge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">✓ ตรงกัน</span>`
+        } else if (r.status === 'pending') {
+          badge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-300">⚠ รอยืนยัน</span>`
+        } else {
+          badge = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-200">ตรวจสอบ</span>`
+        }
+        return `<tr class="border-t border-gray-100 hover:bg-gray-50 transition-colors">
+          <td class="px-5 py-3 text-sm text-gray-600">${formatDateDMY(r.date)}</td>
+          <td class="px-5 py-3 text-sm ${dirColor}">${r.direction}</td>
+          <td class="px-5 py-3 text-sm ${amtColor} text-right ${isLarge ? 'font-bold text-base' : ''}">${Number(r.amount).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+          <td class="px-5 py-3 text-center">${badge}</td>
+        </tr>`
+      }).join('')
+
+      const pairToMain = TRANSFER_DATA.filter(r => r.direction === 'คู่→หลัก').reduce((s, r) => s + r.amount, 0)
+      const mainToPair = TRANSFER_DATA.filter(r => r.direction === 'หลัก→คู่').reduce((s, r) => s + r.amount, 0)
+      const pending    = TRANSFER_DATA.filter(r => r.status === 'pending').reduce((s, r) => s + r.amount, 0)
+      const confirmed  = TRANSFER_DATA.filter(r => r.direction === 'คู่→หลัก' && r.status === 'confirmed').reduce((s, r) => s + r.amount, 0)
+
+      document.getElementById('tr-total-pair-to-main').textContent = Number(pairToMain).toLocaleString('th-TH', {minimumFractionDigits: 2})
+      document.getElementById('tr-total-main-to-pair').textContent = Number(mainToPair).toLocaleString('th-TH', {minimumFractionDigits: 2})
+      document.getElementById('tr-total-pending').textContent      = Number(pending).toLocaleString('th-TH', {minimumFractionDigits: 2})
+
+      const total = confirmed + pending + mainToPair
+      const pcts  = [confirmed, pending, mainToPair].map(v => Math.round(v / total * 100))
+      new Chart(document.getElementById('chart-transfers').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: ['คู่→หลัก (ยืนยัน)', 'คู่→หลัก (รอยืนยัน)', 'หลัก→คู่'],
+          datasets: [{ data: [confirmed, pending, mainToPair], backgroundColor: ['#7c3aed','#f59e0b','#14b8a6'], borderWidth: 2, borderColor: '#fff' }]
+        },
+        options: { responsive: true, cutout: '65%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${Number(c.raw).toLocaleString('th-TH')} บาท (${pcts[c.dataIndex]}%)` } } } }
+      })
+      document.getElementById('tr-legend').innerHTML = [
+        { color: '#7c3aed', label: 'คู่→หลัก (ยืนยัน)',   pct: pcts[0] },
+        { color: '#f59e0b', label: 'คู่→หลัก (รอยืนยัน)', pct: pcts[1] },
+        { color: '#14b8a6', label: 'หลัก→คู่',             pct: pcts[2] },
+      ].map(e => `<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block flex-shrink-0" style="background:${e.color}"></span><span>${e.label}</span><span class="ml-auto font-semibold">${e.pct}%</span></div>`).join('')
+    }
+
+    function formatDateDMY(str) {
+      if (!str) return '—'
+      const [y, m, d] = str.split('-')
+      return `${d}/${m}/${String(parseInt(y) - 2500 + 2543).slice(-2)}`
+    }
+
+    // ---- Tab switching ----
+    const TABS = { overview: 'tab-overview', transfers: 'tab-transfers' }
+    let transferChartRendered = false
+
+    function switchTab(name) {
+      Object.entries(TABS).forEach(([key, panelId]) => {
+        const panel = document.getElementById(panelId)
+        const btn   = document.querySelector(`[data-tab="${key}"]`)
+        if (key === name) {
+          panel.classList.remove('hidden')
+          btn.classList.add('border-yellow-400', 'text-yellow-600', 'bg-white')
+          btn.classList.remove('border-transparent', 'text-gray-500')
+        } else {
+          panel.classList.add('hidden')
+          btn.classList.remove('border-yellow-400', 'text-yellow-600', 'bg-white')
+          btn.classList.add('border-transparent', 'text-gray-500')
+        }
+      })
+      if (name === 'transfers' && !transferChartRendered) {
+        renderTransferTab()
+        transferChartRendered = true
+      }
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab))
+    })
+
+    // ---- Init ----
     document.addEventListener('DOMContentLoaded', async () => {
       await initDashboard()
-
-      // แสดง date range
       if (allTransactions.length) {
         const dates = allTransactions.map(t => t.date).filter(Boolean).sort()
         const from  = formatDate(dates[0])
