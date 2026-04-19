@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hi Solar — Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Navbar -->
+  <nav class="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-6">
+    <span class="font-bold text-yellow-500 text-lg">☀ Hi Solar</span>
+    <a href="index.html"   class="text-sm text-yellow-600 font-semibold border-b-2 border-yellow-400 pb-1">Dashboard</a>
+    <a href="upload.html"  class="text-sm text-gray-500 hover:text-gray-800">Upload</a>
+    <a href="history.html" class="text-sm text-gray-500 hover:text-gray-800">ประวัติ Upload</a>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">สรุปบัญชี Hi Solar</h1>
+        <p id="data-range" class="text-sm text-gray-400 mt-0.5">กำลังโหลดข้อมูล...</p>
+      </div>
+      <a href="upload.html"
+        class="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-white text-sm font-semibold rounded-xl transition-colors">
+        + Upload Statement
+      </a>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">รายรับรวม</p>
+        <p id="card-income" class="text-2xl font-bold text-green-600">—</p>
+      </div>
+      <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">รายจ่ายรวม</p>
+        <p id="card-expense" class="text-2xl font-bold text-red-500">—</p>
+      </div>
+      <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">คงเหลือสุทธิ</p>
+        <p id="card-balance" class="text-2xl font-bold text-gray-800">—</p>
+      </div>
+      <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">จำนวนรายการ</p>
+        <p id="card-count" class="text-2xl font-bold text-indigo-600">—</p>
+      </div>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+      <form id="filter-form" class="flex flex-wrap gap-3 items-end">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">บัญชี</label>
+          <select id="filter-account" name="account"
+            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">หมวดหมู่</label>
+          <select id="filter-category" name="category"
+            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">ตั้งแต่วันที่</label>
+          <input type="date" name="date-from"
+            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">ถึงวันที่</label>
+          <input type="date" name="date-to"
+            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">ค้นหารายละเอียด</label>
+          <input type="text" name="search" placeholder="ค้นหา..."
+            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm w-40 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+        </div>
+        <button type="submit"
+          class="px-4 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white text-sm font-semibold rounded-lg transition-colors">
+          ค้นหา
+        </button>
+        <button type="button" id="filter-reset"
+          class="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-lg transition-colors">
+          รีเซ็ต
+        </button>
+      </form>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+        <h2 class="font-semibold text-gray-700 mb-4">รายรับ / รายจ่าย รายเดือน</h2>
+        <canvas id="chart-monthly" height="120"></canvas>
+      </div>
+      <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+        <h2 class="font-semibold text-gray-700 mb-4">รายจ่ายตามหมวดหมู่</h2>
+        <canvas id="chart-category"></canvas>
+      </div>
+    </div>
+
+    <!-- Transaction Table -->
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+        <h2 class="font-semibold text-gray-700">รายการธุรกรรม</h2>
+        <span id="tx-count" class="text-xs text-gray-400"></span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">วันที่</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">บัญชี</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">หมวดหมู่</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">รายละเอียด</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">จำนวนเงิน</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">ไฟล์ต้นทาง</th>
+            </tr>
+          </thead>
+          <tbody id="tx-tbody">
+            <tr><td colspan="6" class="text-center py-12 text-gray-400">กำลังโหลด...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await initDashboard()
+
+      // แสดง date range
+      if (allTransactions.length) {
+        const dates = allTransactions.map(t => t.date).filter(Boolean).sort()
+        const from  = formatDate(dates[0])
+        const to    = formatDate(dates[dates.length - 1])
+        document.getElementById('data-range').textContent = `ข้อมูล ${from} — ${to}`
+        document.getElementById('tx-count').textContent = `แสดง ${Math.min(allTransactions.length, 500)} จาก ${allTransactions.length} รายการ`
+      } else {
+        document.getElementById('data-range').textContent = 'ยังไม่มีข้อมูล — กรุณา Upload Statement ก่อน'
+      }
+    })
+  </script>
+</body>
+</html>

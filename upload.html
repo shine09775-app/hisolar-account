@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hi Solar — Upload Statement</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <!-- pdf.js สำหรับอ่าน PDF ธนาคาร -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.mjs" type="module"></script>
+  <script type="module">
+    import * as pdfjsLibModule from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.mjs'
+    pdfjsLibModule.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs'
+    window.pdfjsLib = pdfjsLibModule
+  </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Navbar -->
+  <nav class="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-6">
+    <span class="font-bold text-yellow-500 text-lg">☀ Hi Solar</span>
+    <a href="index.html" class="text-sm text-gray-500 hover:text-gray-800">Dashboard</a>
+    <a href="upload.html" class="text-sm text-yellow-600 font-semibold border-b-2 border-yellow-400 pb-1">Upload</a>
+    <a href="history.html" class="text-sm text-gray-500 hover:text-gray-800">ประวัติ Upload</a>
+  </nav>
+
+  <main class="max-w-2xl mx-auto px-4 py-10">
+    <h1 class="text-2xl font-bold text-gray-800 mb-1">Upload Bank Statement</h1>
+    <p class="text-sm text-gray-500 mb-8">รองรับไฟล์ CSV — ระบบจะข้ามรายการที่ซ้ำกันโดยอัตโนมัติ</p>
+
+    <!-- Upload Card -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-5">
+
+      <!-- Account selector -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">บัญชีธนาคาร</label>
+        <select id="account-select"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+          <option value="">— ตรวจสอบจาก CSV อัตโนมัติ —</option>
+          <option value="HiSolar">Hi Solar (บัญชีบริษัท)</option>
+          <option value="บัญชีคู่">บัญชีคู่บริษัท</option>
+          <option value="Advance ชัยวัฒน์">Advance ชัยวัฒน์</option>
+          <option value="KBank">KBank</option>
+          <option value="SCB">SCB</option>
+        </select>
+      </div>
+
+      <!-- Drop zone -->
+      <div id="drop-zone"
+        class="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-yellow-400 hover:bg-yellow-50 transition-colors">
+        <div class="text-4xl mb-3">📂</div>
+        <p class="text-sm font-medium text-gray-700">ลากไฟล์มาวางที่นี่ หรือ</p>
+        <label class="mt-2 inline-block cursor-pointer text-yellow-600 text-sm font-semibold underline underline-offset-2">
+          เลือกไฟล์ CSV หรือ PDF
+          <input id="file-input" type="file" accept=".csv,.pdf" class="hidden">
+        </label>
+        <p class="text-xs text-gray-400 mt-2">รองรับ: CSV (HiSolar/KBank/SCB) · PDF Statement ธนาคาร</p>
+      </div>
+
+      <!-- Selected file info -->
+      <div id="file-info" class="hidden bg-gray-50 rounded-lg px-4 py-3 flex items-center justify-between">
+        <div>
+          <p id="file-name" class="text-sm font-medium text-gray-800"></p>
+          <p id="file-size" class="text-xs text-gray-400"></p>
+        </div>
+        <button id="file-clear" class="text-gray-400 hover:text-red-500 text-lg leading-none">✕</button>
+      </div>
+
+      <!-- Progress bar -->
+      <div id="progress-wrap" class="hidden">
+        <div class="flex justify-between text-xs text-gray-500 mb-1">
+          <span>กำลัง upload...</span>
+          <span id="progress-label">0 / 0</span>
+        </div>
+        <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div id="progress-bar" class="h-full bg-yellow-400 transition-all duration-300" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Status message -->
+      <p id="upload-status" class="text-sm font-medium"></p>
+
+      <!-- Upload button -->
+      <button id="upload-btn" disabled
+        class="w-full py-3 rounded-xl bg-yellow-400 hover:bg-yellow-500 text-white font-semibold text-sm
+               disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+        Upload & บันทึกข้อมูล
+      </button>
+    </div>
+
+    <!-- Preview table -->
+    <div id="preview-table"></div>
+
+    <!-- Format guide -->
+    <div class="mt-8 bg-white rounded-2xl border border-gray-200 p-6">
+      <h2 class="font-semibold text-gray-700 mb-4">รูปแบบไฟล์ที่รองรับ</h2>
+      <div class="space-y-4 text-sm text-gray-600">
+
+        <div class="bg-blue-50 rounded-xl p-4">
+          <p class="font-semibold text-blue-700 mb-1">📄 PDF Statement ธนาคาร (แนะนำ)</p>
+          <p class="text-xs text-blue-600">รองรับ KBank · SCB · กรุงไทย · กรุงเทพ — ตรวจจับธนาคารอัตโนมัติ</p>
+          <p class="text-xs text-gray-500 mt-1">upload PDF ที่ได้จากธนาคารได้เลย ไม่ต้องแปลงก่อน</p>
+        </div>
+
+        <div>
+          <span class="font-medium text-gray-800">CSV — HiSolar Format</span>
+          <code class="block mt-1 bg-gray-50 rounded px-3 py-2 text-xs text-gray-700 overflow-x-auto whitespace-nowrap">
+            RecordNo, Account, Date, Time, Amount, Category, Transfered-Account, Memo/Note
+          </code>
+        </div>
+        <div>
+          <span class="font-medium text-gray-800">CSV — KBank / SCB</span>
+          <p class="text-xs text-gray-400 mt-1">Export จากแอปธนาคาร — ตรวจจับ format อัตโนมัติ</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/parser.js"></script>
+  <script src="js/upload.js"></script>
+  <script>
+    const fileInput  = document.getElementById('file-input')
+    const dropZone   = document.getElementById('drop-zone')
+    const fileInfo   = document.getElementById('file-info')
+    const uploadBtn  = document.getElementById('upload-btn')
+    const progressWrap = document.getElementById('progress-wrap')
+    let selectedFile = null
+
+    function selectFile(file) {
+      const ext = file?.name.split('.').pop().toLowerCase()
+      if (!file || !['csv','pdf'].includes(ext)) {
+        setStatus('error', 'รองรับเฉพาะไฟล์ .csv หรือ .pdf เท่านั้น')
+        return
+      }
+      selectedFile = file
+      document.getElementById('file-name').textContent = file.name
+      document.getElementById('file-size').textContent = (file.size / 1024).toFixed(1) + ' KB'
+      fileInfo.classList.remove('hidden')
+      uploadBtn.disabled = false
+      document.getElementById('upload-status').textContent = ''
+    }
+
+    fileInput.addEventListener('change', e => selectFile(e.target.files[0]))
+
+    dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('border-yellow-400','bg-yellow-50') })
+    dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('border-yellow-400','bg-yellow-50'))
+    dropZone.addEventListener('drop',      e => {
+      e.preventDefault()
+      dropZone.classList.remove('border-yellow-400','bg-yellow-50')
+      selectFile(e.dataTransfer.files[0])
+    })
+
+    document.getElementById('file-clear').addEventListener('click', () => {
+      selectedFile = null
+      fileInput.value = ''
+      fileInfo.classList.add('hidden')
+      uploadBtn.disabled = true
+      document.getElementById('upload-status').textContent = ''
+      document.getElementById('preview-table').innerHTML = ''
+    })
+
+    uploadBtn.addEventListener('click', async () => {
+      if (!selectedFile) return
+      uploadBtn.disabled = true
+      progressWrap.classList.remove('hidden')
+      document.getElementById('progress-bar').style.width = '0%'
+      const account = document.getElementById('account-select').value
+      await handleUpload(selectedFile, account)
+      uploadBtn.disabled = false
+    })
+  </script>
+</body>
+</html>
