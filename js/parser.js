@@ -247,6 +247,21 @@ const CSV_FORMATS = {
       memo:        row['รายละเอียด'] || row['description'] || '',
       picture_filename: '',
     })
+  },
+
+  // KBank CSV export จากระบบ (มี transaction_date, signed_amount, description)
+  KBANK_EXPORT: {
+    detect: (headers) => headers.includes('transaction_date') && headers.includes('signed_amount'),
+    map: (row) => ({
+      account:             row['statement_account_name'] || row['account_number'] || 'KBank',
+      date:                parseDateAuto(row['transaction_date'] || ''),
+      time:                row['transaction_time'] || null,
+      amount:              parseFloat((row['signed_amount'] || '0').replace(/,/g, '')),
+      category:            row['transaction_type'] || '',
+      transferred_account: '',
+      memo:                row['description'] || '',
+      picture_filename:    '',
+    })
   }
 }
 
