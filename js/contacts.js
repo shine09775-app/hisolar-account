@@ -96,9 +96,9 @@ function openModal(id = null) {
       <div>
         <label class="label">ประเภท <span class="text-red-400">*</span></label>
         <select id="f-type" class="input" onchange="onTypeChange(this.value)">
-          <option value="customer" ${(!r || r.type === 'customer') ? 'selected' : ''}>👤 ลูกค้า</option>
-          <option value="supplier" ${r?.type === 'supplier' ? 'selected' : ''}>🏪 ผู้จำหน่าย</option>
-          <option value="internal" ${r?.type === 'internal' ? 'selected' : ''}>🏦 บัญชีภายใน</option>
+          <option value="customer" ${(r?.type || currentTab) === 'customer' ? 'selected' : ''}>👤 ลูกค้า</option>
+          <option value="supplier" ${(r?.type || currentTab) === 'supplier' ? 'selected' : ''}>🏪 ผู้จำหน่าย</option>
+          <option value="internal" ${(r?.type || currentTab) === 'internal' ? 'selected' : ''}>🏦 บัญชีภายใน</option>
         </select>
       </div>
       <div>
@@ -157,7 +157,11 @@ async function saveContact() {
     const name = document.getElementById('f-name').value.trim()
     if (!name) { alert('กรุณากรอกชื่อ'); return }
 
-    const type = document.getElementById('f-type').value
+    const type    = document.getElementById('f-type').value
+    const oldRec  = editingId ? (contactRecords[currentTab]?.[editingId] || null) : null
+    const oldName = oldRec?.name || null
+    const oldType = oldRec?.type || null
+
     const val = id => document.getElementById(id)?.value.trim() || null
     const payload = {
       type,
@@ -174,6 +178,24 @@ async function saveContact() {
       : await db.from('contacts').insert(payload)
 
     if (error) throw error
+
+    // Cascade rename → maintain records (income_records / expense_records)
+    if (editingId && oldName && oldName !== name) {
+      const cascadeOps = []
+      if (oldType === 'customer' || type === 'customer') {
+        cascadeOps.push(
+          db.from('income_records').update({ customer_name: name }).eq('customer_name', oldName)
+        )
+      }
+      if (oldType === 'supplier' || type === 'supplier') {
+        cascadeOps.push(
+          db.from('expense_records').update({ supplier_name: name }).eq('supplier_name', oldName)
+        )
+      }
+      const results = await Promise.all(cascadeOps)
+      const cascadeError = results.find(r => r.error)?.error
+      if (cascadeError) console.warn('Cascade rename warning:', cascadeError.message)
+    }
 
     closeModal()
 

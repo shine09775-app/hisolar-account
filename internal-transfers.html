@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hi Solar — โอนระหว่างบัญชี</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <link rel="stylesheet" href="css/index-theme.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <nav class="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-6">
+    <span class="font-bold text-yellow-500 text-lg">☀ Hi Solar</span>
+    <a href="index.html" class="text-sm text-gray-500 hover:text-gray-800">Dashboard</a>
+    <a href="internal-transfers.html" class="text-sm text-yellow-600 font-semibold border-b-2 border-yellow-400 pb-1">โอนระหว่างบัญชี</a>
+    <a href="upload.html" class="text-sm text-gray-500 hover:text-gray-800">Upload</a>
+    <a href="history.html" class="text-sm text-gray-500 hover:text-gray-800">Upload Log</a>
+    <a href="maintain.html" class="text-sm text-gray-500 hover:text-gray-800">ข้อมูลรายการ</a>
+    <a href="contacts.html" class="text-sm text-gray-500 hover:text-gray-800">สมุดรายชื่อ</a>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">โอนระหว่างบัญชี</h1>
+        <p id="transfer-range" class="text-sm text-gray-400 mt-0.5">กำลังโหลดข้อมูล...</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="transfer-count" class="text-xs text-gray-400"></span>
+        <button id="refresh-internal-btn" onclick="refreshInternalTransfers()"
+          class="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-white text-sm font-semibold rounded-xl transition-colors">
+          รีเฟรช
+        </button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-gray-200 p-4 text-sm text-gray-500 shadow-sm">
+      แสดงเฉพาะรายการภายในระหว่างบัญชีบริษัท, บัญชีคู่ และบัญชีของกรรมการที่กำหนดไว้ในเมนู <a href="contacts.html" class="text-yellow-600 hover:underline">สมุดรายชื่อ</a> แท็บ <span class="font-medium">🏦 บัญชีภายใน</span>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="px-5 py-4 border-b border-gray-100">
+          <h2 class="font-semibold text-gray-800">รายการภายใน — โอน / เงินเดือน / Advance / ปันผล</h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead class="bg-slate-700 text-white">
+              <tr>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">วันที่</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">ประเภท</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">ทิศทาง</th>
+                <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide">จำนวน (บาท)</th>
+                <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide">สถานะ</th>
+              </tr>
+            </thead>
+            <tbody id="transfer-tbody">
+              <tr><td colspan="5" class="text-center py-10 text-gray-400">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-4">
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">โอนระหว่างบัญชี</p>
+          <p id="tr-total-pair-to-main" class="text-2xl font-bold text-purple-600">—</p>
+          <p class="text-xs text-gray-400 mt-1">บาท (ยืนยันแล้ว)</p>
+        </div>
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">โอนออกให้กรรมการ / เงินเดือน</p>
+          <p id="tr-total-main-to-pair" class="text-2xl font-bold text-pink-500">—</p>
+          <p class="text-xs text-gray-400 mt-1">บาท (รวมเงินเดือน + อื่นๆ)</p>
+        </div>
+        <div class="bg-amber-50 rounded-2xl border border-amber-200 p-5 shadow-sm">
+          <p class="text-xs text-amber-600 uppercase tracking-wide mb-1 font-semibold">⚠ รอยืนยัน</p>
+          <p id="tr-total-pending" class="text-2xl font-bold text-amber-600">—</p>
+          <p class="text-xs text-amber-500 mt-1">บาท (พบฝั่งเดียว)</p>
+        </div>
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <p class="text-xs text-gray-500 font-semibold mb-3">สัดส่วนรายการภายใน</p>
+          <canvas id="chart-transfers"></canvas>
+          <div id="tr-legend" class="mt-3 space-y-1 text-xs text-gray-500"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/mappings.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/internal-transfers.js"></script>
+</body>
+</html>

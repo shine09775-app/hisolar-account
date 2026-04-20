@@ -4,9 +4,12 @@ let allTransactions = []
 let currentRows     = []
 let chartIncome, chartExpenseGroup, chartIncomeCustomer
 
-// Maintain lookup maps: key = "YYYY-MM-DD|amount" → full record
+// Maintain lookup maps: key = "YYYY-MM-DD|amount" → full record (fallback)
 let incomeMap  = {}   // amount > 0
 let expenseMap = {}   // amount (positive value)
+// Primary lookup by transaction_id (ไม่ชน key แม้ date+amount เหมือนกัน)
+let incomeMapByTxId  = {}
+let expenseMapByTxId = {}
 
 // Contacts lookup: account_number/code → { name, type }
 let contactMap  = {}
@@ -14,6 +17,11 @@ let allContacts = []
 
 // VAT flags: Set of transaction IDs that are marked as VAT
 let vatSet = new Set()
+
+// Auto Sync state
+let syncResults       = new Map()   // txId → { status, contact?, score? }
+let autoSyncAutoItems   = []        // score > 0.8
+let autoSyncReviewItems = []        // score 0.5–0.8
 
 async function initDashboard() {
   await Auth.guard()
@@ -58,30 +66,36 @@ async function loadMaintainRecords() {
     db.from('income_records').select('id, transaction_date, amount, customer_name, job_name, job_details, account_number, file_url, file_name'),
     db.from('expense_records').select('id, transaction_date, amount, supplier_name, details, account_number, file_url, file_name'),
   ])
-  incomeMap = {}
+  incomeMap = {}; incomeMapByTxId = {}
   ;(inc || []).forEach(r => {
     if (r.transaction_date && r.amount != null)
       incomeMap[`${r.transaction_date}|${r.amount}`] = r
+    if (r.transaction_id) incomeMapByTxId[String(r.transaction_id)] = r
   })
-  expenseMap = {}
+  expenseMap = {}; expenseMapByTxId = {}
   ;(exp || []).forEach(r => {
     if (r.transaction_date && r.amount != null)
       expenseMap[`${r.transaction_date}|${r.amount}`] = r
+    if (r.transaction_id) expenseMapByTxId[String(r.transaction_id)] = r
   })
 }
 
-// คืนชื่อที่ maintain ไว้ (ถ้ามี) สำหรับ transaction นั้น
-function getMaintainedName(t) {
-  if (t.amount > 0) return incomeMap[`${t.date}|${t.amount}`]?.customer_name || null
-  if (t.amount < 0) return expenseMap[`${t.date}|${Math.abs(t.amount)}`]?.supplier_name || null
+// คืน maintain record สำหรับ transaction นั้น — ค้นด้วย txId ก่อน fallback date|amount
+function getMaintainRecord(t) {
+  const txId = String(t.id)
+  if (t.amount > 0) return incomeMapByTxId[txId]  || incomeMap[`${t.date}|${t.amount}`]  || null
+  if (t.amount < 0) return expenseMapByTxId[txId] || expenseMap[`${t.date}|${Math.abs(t.amount)}`] || null
   return null
 }
 
-// คืนรายละเอียดที่ maintain ไว้ (ชื่องาน หรือ รายละเอียดสินค้า)
+function getMaintainedName(t) {
+  const r = getMaintainRecord(t)
+  return t.amount > 0 ? (r?.customer_name || null) : (r?.supplier_name || null)
+}
+
 function getMaintainedDetail(t) {
-  if (t.amount > 0) return incomeMap[`${t.date}|${t.amount}`]?.job_name || null
-  if (t.amount < 0) return expenseMap[`${t.date}|${Math.abs(t.amount)}`]?.details || null
-  return null
+  const r = getMaintainRecord(t)
+  return t.amount > 0 ? (r?.job_name || null) : (r?.details || null)
 }
 
 // ---- Load from Supabase (date / search — account+category กรองฝั่ง client) ----
@@ -322,20 +336,35 @@ function renderTable(rows) {
   tbody.innerHTML = rows.slice(0, 500).map(t => {
     const info         = getContactInfo(t)
     const counterparty = info ? info.name : extractCounterparty(t.memo)
+    const syncResult   = syncResults.get(String(t.id))
     const badge = info?.type === 'internal'
       ? `<span class="ml-1.5 text-[10px] bg-slate-100 text-slate-500 rounded px-1 py-0.5 font-medium align-middle">ภายใน</span>`
       : info?.source === 'maintain'
         ? `<span class="ml-1.5 text-[10px] bg-indigo-100 text-indigo-500 rounded px-1 py-0.5 font-medium align-middle">M</span>`
         : info?.source === 'contact'
           ? `<span class="ml-1.5 text-[10px] bg-green-100 text-green-600 rounded px-1 py-0.5 font-medium align-middle">สมุด</span>`
-          : ''
+          : syncResult?.status === 'auto'
+            ? `<span class="ml-1.5 text-[10px] bg-blue-100 text-blue-600 rounded px-1 py-0.5 font-medium align-middle" title="${Math.round((syncResult.score||0)*100)}% match">⚡${Math.round((syncResult.score||0)*100)}%</span>`
+            : syncResult?.status === 'review'
+              ? `<span class="ml-1.5 text-[10px] bg-amber-100 text-amber-700 rounded px-1 py-0.5 font-medium align-middle" title="${Math.round((syncResult.score||0)*100)}% — ต้องยืนยัน">⚠${Math.round((syncResult.score||0)*100)}%</span>`
+              : syncResult?.status === 'unmatched'
+                ? `<span class="ml-1.5 text-[10px] bg-red-100 text-red-500 rounded px-1 py-0.5 font-medium align-middle">❌ ไม่พบ</span>`
+                : ''
     const nameCell = info
       ? `<span class="text-indigo-700 font-semibold">${esc(counterparty)}</span>${badge}`
-      : `<span>${esc(counterparty)}</span>`
+      : (syncResult?.status === 'auto' || syncResult?.status === 'review')
+        ? `<span class="text-blue-600 font-medium">${esc(syncResult.contact.name)}</span>${badge}`
+        : `<span>${esc(counterparty)}</span>${badge}`
 
     const linkBtn = info?.type !== 'internal'
       ? `<button onclick="openLinkModal('${esc(String(t.id))}')" title="เชื่อมโยง / แก้ไขรายละเอียด"
           class="ml-1.5 text-[10px] bg-yellow-50 text-yellow-600 border border-yellow-200 rounded px-1 py-0.5 hover:bg-yellow-100 transition-colors align-middle whitespace-nowrap">✎ เชื่อม</button>`
+      : ''
+
+    const hasMatch = info?.source === 'maintain' || syncResult?.status === 'auto' || syncResult?.status === 'review'
+    const resetBtn = (info?.type !== 'internal' && hasMatch)
+      ? `<button onclick="resetMatch('${esc(String(t.id))}')" title="รีเซ็ตการจับคู่ เพื่อ Match ใหม่"
+          class="ml-1 text-[10px] bg-red-50 text-red-400 border border-red-200 rounded px-1 py-0.5 hover:bg-red-100 transition-colors align-middle whitespace-nowrap">↺ รีเซ็ต</button>`
       : ''
 
     const maintainDetail = getMaintainedDetail(t)
@@ -369,7 +398,7 @@ function renderTable(rows) {
     return `<tr class="border-t border-gray-100 hover:bg-gray-50 transition-colors">
       <td class="px-4 py-2 text-sm text-gray-600 whitespace-nowrap">${formatDate(t.date)}</td>
       <td class="px-4 py-2 text-sm text-gray-700">${displayAccount(t.account)}</td>
-      <td class="px-4 py-2 text-sm max-w-[220px]" title="${esc(counterparty)}">${nameCell}${linkBtn}</td>
+      <td class="px-4 py-2 text-sm max-w-[220px]" title="${esc(counterparty)}">${nameCell}${linkBtn}${resetBtn}</td>
       <td class="px-4 py-2 text-sm max-w-xs truncate" title="${detailTitle}">${detailCell}</td>
       <td class="px-4 py-2 text-center whitespace-nowrap">${vatCell}</td>
       <td class="px-4 py-2 text-sm text-right whitespace-nowrap">${income}</td>
@@ -660,8 +689,7 @@ async function saveLinkRecord() {
 
     const detail      = document.getElementById('lm-detail').value.trim()
     const saveContact = document.getElementById('lm-save-contact').checked
-    const key         = isIncome ? `${t.date}|${t.amount}` : `${t.date}|${Math.abs(t.amount)}`
-    const existing    = isIncome ? incomeMap[key] : expenseMap[key]
+    const existing    = getMaintainRecord(t)
 
     let payload, table
     if (isIncome) {
@@ -672,6 +700,7 @@ async function saveLinkRecord() {
         job_details:      jobDetails,
         transaction_date: t.date,
         amount:           t.amount,
+        transaction_id:   t.id,
         account_number:   existing?.account_number || null,
         file_url:         existing?.file_url  || null,
         file_name:        existing?.file_name || null,
@@ -683,6 +712,7 @@ async function saveLinkRecord() {
         details:          detail || null,
         transaction_date: t.date,
         amount:           Math.abs(t.amount),
+        transaction_id:   t.id,
         account_number:   existing?.account_number || null,
         file_url:         existing?.file_url  || null,
         file_name:        existing?.file_name || null,
@@ -744,4 +774,525 @@ function populateSelect(id, options) {
   if (!el) return
   el.innerHTML = '<option value="">ทั้งหมด</option>' +
     options.map(o => `<option value="${o}">${o}</option>`).join('')
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Auto Sync: Fuzzy-match transactions → counterparty_master (contacts)
+// ──────────────────────────────────────────────────────────────────────
+
+function levenshteinDist(a, b) {
+  if (Math.abs(a.length - b.length) > 30) return Math.max(a.length, b.length)
+  if (!a.length) return b.length
+  if (!b.length) return a.length
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i)
+  for (let i = 1; i <= a.length; i++) {
+    const curr = [i]
+    for (let j = 1; j <= b.length; j++) {
+      curr[j] = a[i - 1] === b[j - 1]
+        ? prev[j - 1]
+        : 1 + Math.min(prev[j], curr[j - 1], prev[j - 1])
+    }
+    prev = curr
+  }
+  return prev[b.length]
+}
+
+function fuzzyScore(text, name) {
+  if (!text || !name) return 0
+  const t = text.toLowerCase().trim()
+  const n = name.toLowerCase().trim()
+  if (!t || !n) return 0
+  if (t === n) return 1
+  if (t.includes(n)) return 0.88 + 0.12 * Math.min(1, n.length / t.length)
+  if (n.includes(t)) return 0.88 + 0.12 * Math.min(1, t.length / n.length)
+  const ta = t.slice(0, 50), na = n.slice(0, 50)
+  const lev = levenshteinDist(ta, na)
+  return Math.max(0, 1 - lev / Math.max(ta.length, na.length))
+}
+
+function bestContactMatch(memo) {
+  if (!memo || !allContacts.length) return null
+  const cp = extractCounterparty(memo)
+  const cpText = (cp && cp !== '—') ? cp : ''
+  let best = null, bestScore = 0
+  for (const c of allContacts) {
+    if (c.type === 'internal') continue
+    const score = Math.max(
+      fuzzyScore(memo, c.name),
+      cpText ? fuzzyScore(cpText, c.name) : 0
+    )
+    if (score > bestScore) { bestScore = score; best = c }
+  }
+  return (best && bestScore >= 0.5) ? { contact: best, score: bestScore } : null
+}
+
+async function runAutoSync() {
+  const btn = document.getElementById('auto-sync-btn')
+  btn.disabled = true
+  btn.textContent = '⏳ วิเคราะห์...'
+  try {
+    await loadContactsMap()
+    const matchableContacts = allContacts.filter(c => c.type !== 'internal')
+    if (!matchableContacts.length) {
+      showSyncToast('ไม่พบ Supplier / Customer ในสมุดรายชื่อ — กรุณาเพิ่มรายชื่อก่อน', 'info')
+      return
+    }
+    const toProcess = currentRows.filter(t => t.amount !== 0 && !getContactInfo(t))
+    if (!toProcess.length) {
+      showSyncToast('✅ ทุกรายการมีการจับคู่แล้ว', 'green')
+      return
+    }
+    autoSyncAutoItems   = []
+    autoSyncReviewItems = []
+    const noMatchItems  = []
+    for (const t of toProcess) {
+      const match = bestContactMatch(t.memo)
+      if (!match)               noMatchItems.push({ t })
+      else if (match.score > 0.8) autoSyncAutoItems.push({ t, contact: match.contact, score: match.score })
+      else                        autoSyncReviewItems.push({ t, contact: match.contact, score: match.score })
+    }
+    syncResults = new Map()
+    for (const { t } of noMatchItems)
+      syncResults.set(String(t.id), { status: 'unmatched' })
+    for (const { t, contact, score } of autoSyncAutoItems)
+      syncResults.set(String(t.id), { status: 'auto', contact, score })
+    for (const { t, contact, score } of autoSyncReviewItems)
+      syncResults.set(String(t.id), { status: 'review', contact, score })
+    renderAutoSyncModal(autoSyncAutoItems, autoSyncReviewItems, noMatchItems)
+    renderTable(currentRows)
+  } finally {
+    btn.disabled = false
+    btn.textContent = '⚡ Auto Sync'
+  }
+}
+
+function renderAutoSyncModal(autoItems, reviewItems, noMatchItems) {
+  const total = autoItems.length + reviewItems.length + noMatchItems.length
+  const html = `
+    <div class="space-y-4">
+      <div class="grid grid-cols-3 gap-3">
+        <div class="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+          <p class="text-2xl font-bold text-green-600">${autoItems.length}</p>
+          <p class="text-xs text-green-700 font-medium mt-0.5">จับคู่อัตโนมัติ</p>
+          <p class="text-[10px] text-green-500 opacity-80">&gt;80% — เลือกเพื่อบันทึก</p>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+          <p class="text-2xl font-bold text-amber-600">${reviewItems.length}</p>
+          <p class="text-xs text-amber-700 font-medium mt-0.5">รอยืนยัน</p>
+          <p class="text-[10px] text-amber-500 opacity-80">50–80% — เลือกเพื่อยืนยัน</p>
+        </div>
+        <div class="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
+          <p class="text-2xl font-bold text-red-500">${noMatchItems.length}</p>
+          <p class="text-xs text-red-600 font-medium mt-0.5">ไม่พบ</p>
+          <p class="text-[10px] text-red-400 opacity-80">&lt;50% — กรอกด้วยตนเอง</p>
+        </div>
+      </div>
+      <p class="text-xs text-gray-400">วิเคราะห์ ${total} รายการที่ยังไม่ได้จับคู่ จาก ${currentRows.length} รายการที่แสดงอยู่</p>
+      ${autoItems.length   ? renderSyncSection(autoItems,   0,                true,  '✅ จับคู่อัตโนมัติ (>80%)') : ''}
+      ${reviewItems.length ? renderSyncSection(reviewItems, autoItems.length, false, '⚠ ต้องยืนยัน (50–80%)') : ''}
+      ${noMatchItems.length ? renderUnmatchedSection(noMatchItems) : ''}
+    </div>`
+  document.getElementById('auto-sync-content').innerHTML = html
+  document.getElementById('auto-sync-modal').classList.remove('hidden')
+  document.body.classList.add('overflow-hidden')
+}
+
+function renderSyncSection(items, startIdx, preChecked, title) {
+  const endIdx = startIdx + items.length - 1
+  const rows = items.map((item, i) => {
+    const idx = startIdx + i
+    const { t, contact, score } = item
+    const pct = Math.round(score * 100)
+    const pctColor = score > 0.8 ? 'text-green-600' : 'text-amber-600'
+    const amtHtml = t.amount > 0
+      ? `<span class="text-green-600 font-semibold text-xs">+${formatBaht(t.amount)}</span>`
+      : `<span class="text-red-500 font-semibold text-xs">${formatBaht(t.amount)}</span>`
+    const typeBadge = contact.type === 'customer'
+      ? '<span class="text-[9px] bg-blue-100 text-blue-600 rounded px-1 ml-1">ลูกค้า</span>'
+      : '<span class="text-[9px] bg-orange-100 text-orange-600 rounded px-1 ml-1">Supplier</span>'
+    const memoText = (t.memo || '').slice(0, 70)
+    return `<tr class="border-t border-gray-100 hover:bg-gray-50">
+      <td class="px-3 py-2"><input type="checkbox" id="sync-cb-${idx}" ${preChecked ? 'checked' : ''}
+        class="w-4 h-4 rounded accent-yellow-500 cursor-pointer"></td>
+      <td class="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">${formatDate(t.date)}</td>
+      <td class="px-3 py-2 text-xs">${amtHtml}</td>
+      <td class="px-3 py-2 text-xs text-gray-500 max-w-[280px] truncate" title="${esc(t.memo || '')}">${esc(memoText)}</td>
+      <td class="px-3 py-2 text-xs font-semibold text-gray-800">${esc(contact.name)}${typeBadge}</td>
+      <td class="px-3 py-2 text-xs font-bold ${pctColor}">${pct}%</td>
+    </tr>`
+  }).join('')
+  return `<div class="border border-gray-200 rounded-xl overflow-hidden">
+    <div class="px-4 py-2.5 bg-gray-50 flex items-center justify-between">
+      <span class="text-sm font-semibold text-gray-700">${title}</span>
+      <label class="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
+        <input type="checkbox" onchange="toggleSyncSection(${startIdx},${endIdx},this.checked)" ${preChecked ? 'checked' : ''}
+          class="w-3.5 h-3.5 rounded accent-yellow-500"> เลือกทั้งหมด
+      </label>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full">
+        <thead class="bg-gray-50 text-[10px] text-gray-400 uppercase tracking-wide">
+          <tr>
+            <th class="px-3 py-2 w-8"></th>
+            <th class="px-3 py-2 text-left">วันที่</th>
+            <th class="px-3 py-2 text-left">จำนวน</th>
+            <th class="px-3 py-2 text-left">Memo</th>
+            <th class="px-3 py-2 text-left">จับคู่กับ (สมุดรายชื่อ)</th>
+            <th class="px-3 py-2 text-left">ความมั่นใจ</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white">${rows}</tbody>
+      </table>
+    </div>
+  </div>`
+}
+
+function renderUnmatchedSection(items) {
+  const rows = items.map(({ t }) => {
+    const amtHtml = t.amount > 0
+      ? `<span class="text-green-600 text-xs">+${formatBaht(t.amount)}</span>`
+      : `<span class="text-red-500 text-xs">${formatBaht(t.amount)}</span>`
+    return `<tr class="border-t border-gray-100">
+      <td class="px-3 py-2 text-xs text-gray-400 whitespace-nowrap">${formatDate(t.date)}</td>
+      <td class="px-3 py-2">${amtHtml}</td>
+      <td class="px-3 py-2 text-xs text-gray-400 max-w-[200px] truncate" title="${esc(t.memo || '')}">${esc((t.memo || '').slice(0, 40))}</td>
+      <td class="px-3 py-2 text-xs text-red-400 italic">ไม่พบในสมุดรายชื่อ — ใช้ปุ่ม ✎ เชื่อม</td>
+    </tr>`
+  }).join('')
+  return `<div class="border border-red-200 rounded-xl overflow-hidden">
+    <div class="px-4 py-2.5 bg-red-50">
+      <span class="text-sm font-semibold text-red-600">❌ ไม่พบ (&lt;50%) — กรอกด้วยตนเอง</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="min-w-full">
+        <thead class="bg-red-50 text-[10px] text-red-300 uppercase tracking-wide">
+          <tr>
+            <th class="px-3 py-2 text-left">วันที่</th>
+            <th class="px-3 py-2 text-left">จำนวน</th>
+            <th class="px-3 py-2 text-left">Memo</th>
+            <th class="px-3 py-2 text-left">หมายเหตุ</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white">${rows}</tbody>
+      </table>
+    </div>
+  </div>`
+}
+
+function toggleSyncSection(fromIdx, toIdx, checked) {
+  for (let i = fromIdx; i <= toIdx; i++) {
+    const cb = document.getElementById(`sync-cb-${i}`)
+    if (cb) cb.checked = checked
+  }
+}
+
+async function saveSyncSelections() {
+  const btn = document.getElementById('sync-save-btn')
+  btn.disabled = true
+  btn.textContent = 'กำลังบันทึก...'
+  try {
+    const allPending = [...autoSyncAutoItems, ...autoSyncReviewItems]
+    const toSave = allPending.filter((_, i) => {
+      const cb = document.getElementById(`sync-cb-${i}`)
+      return cb?.checked
+    })
+    if (!toSave.length) {
+      showSyncToast('ไม่มีรายการที่เลือก', 'info')
+      return
+    }
+    let saved = 0, errors = 0
+    for (const { t, contact } of toSave) {
+      try {
+        await saveAutoSyncMatch(t, contact.name, contact.type)
+        saved++
+      } catch (e) {
+        console.error('Auto sync save error:', e)
+        errors++
+      }
+    }
+    await Promise.all([loadMaintainRecords(), loadContactsMap()])
+    syncResults = new Map()
+    autoSyncAutoItems   = []
+    autoSyncReviewItems = []
+    renderAll(currentRows)
+    closeAutoSyncModal()
+    showSyncToast(
+      errors ? `บันทึก ${saved} รายการ (ข้อผิดพลาด ${errors})` : `✅ บันทึกสำเร็จ ${saved} รายการ`,
+      errors ? 'red' : 'green'
+    )
+  } finally {
+    btn.disabled = false
+    btn.textContent = 'บันทึกที่เลือก'
+  }
+}
+
+async function saveAutoSyncMatch(t, contactName) {
+  const isIncome = t.amount > 0
+  const existing = getMaintainRecord(t)
+  if (isIncome) {
+    const payload = { customer_name: contactName, transaction_date: t.date, amount: t.amount, transaction_id: t.id }
+    const { error } = existing?.id
+      ? await db.from('income_records').update(payload).eq('id', existing.id)
+      : await db.from('income_records').insert(payload)
+    if (error) throw error
+  } else {
+    const payload = { supplier_name: contactName, transaction_date: t.date, amount: Math.abs(t.amount), transaction_id: t.id }
+    const { error } = existing?.id
+      ? await db.from('expense_records').update(payload).eq('id', existing.id)
+      : await db.from('expense_records').insert(payload)
+    if (error) throw error
+  }
+}
+
+function closeAutoSyncModal() {
+  document.getElementById('auto-sync-modal').classList.add('hidden')
+  document.body.classList.remove('overflow-hidden')
+}
+
+async function resetMatch(txId) {
+  const t = allTransactions.find(t => String(t.id) === String(txId))
+  if (!t) return
+
+  const existing = getMaintainRecord(t)
+
+  if (existing?.id) {
+    if (!confirm('ลบการจับคู่นี้และรีเซ็ต เพื่อ Match ใหม่?')) return
+    const table = t.amount > 0 ? 'income_records' : 'expense_records'
+    const { error } = await db.from(table).delete().eq('id', existing.id)
+    if (error) { alert('รีเซ็ตไม่สำเร็จ: ' + error.message); return }
+    await loadMaintainRecords()
+  }
+
+  syncResults.delete(String(txId))
+  renderTable(currentRows)
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Internal Transaction Detection — โอนระหว่างบัญชี / เงินเดือน / Advance / ปันผล
+// ──────────────────────────────────────────────────────────────────────
+
+const SALARY_RANGE    = { min: 13000, max: 17000 }
+const SALARY_DAY_MAX  = 12
+const CHAIYAWAT_CODES = ['X3006', 'X8624']   // fallback ถ้ายังไม่ setup contacts
+const INTERNAL_TYPE_SALARY = '\u0e40\u0e07\u0e34\u0e19\u0e40\u0e14\u0e37\u0e2d\u0e19'
+const INTERNAL_TYPES  = new Set(['โอนระหว่างบัญชี', 'โอนออกให้กรรมการ', 'โอนเข้าจากกรรมการ', 'ปันผลกรรมการ', INTERNAL_TYPE_SALARY, 'อื่นๆ'])
+
+function normInternalText(v) {
+  return String(v || '').trim().toLowerCase()
+}
+
+function findInternalAccountByRaw(raw) {
+  if (!raw) return null
+  const text = String(raw)
+  const lower = text.toLowerCase()
+  return allContacts.find(c =>
+    c.type === 'internal' && (
+      (c.account_number && text.includes(c.account_number)) ||
+      (c.name && lower.includes(c.name.toLowerCase()))
+    )
+  ) || null
+}
+
+function findMappedSharedInternal(raw) {
+  if (!raw) return null
+  const matchedLabel = ACCOUNT_LABELS.find(l => l.match(String(raw)))
+  if (!matchedLabel) return null
+  return {
+    type: 'internal',
+    name: matchedLabel.display,
+    account_number: null,
+    synthetic: true,
+  }
+}
+
+function findInternalSource(raw) {
+  return findInternalAccountByRaw(raw) || findMappedSharedInternal(raw)
+}
+
+function findInternalCounterparty(text, excludeName = '') {
+  if (!text) return null
+  const lower = String(text).toLowerCase()
+  const excluded = normInternalText(excludeName)
+  return allContacts.find(c => {
+    if (c.type !== 'internal') return false
+    if (excluded && normInternalText(c.name) === excluded) return false
+    return (c.account_number && text.includes(c.account_number))
+      || (c.name && lower.includes(c.name.toLowerCase()))
+  }) || null
+}
+
+function displayInternalAccount(raw) {
+  return findInternalSource(raw)?.name || displayAccount(raw)
+}
+
+function isMappedSharedInternal(contact) {
+  if (!contact) return false
+  return ACCOUNT_LABELS.some(l =>
+    (contact.account_number && l.match(contact.account_number)) ||
+    (contact.name && l.match(contact.name))
+  )
+}
+
+function findInternalDirectorCounterparty(text, excludeName = '') {
+  const contact = findInternalCounterparty(text, excludeName)
+  if (!contact) return null
+  if (isMappedSharedInternal(contact)) return null
+  return contact
+}
+
+function detectInternalTx(rows) {
+  // ดึง internal contacts จากสมุดรายชื่อ
+  const intContacts = allContacts.filter(c => c.type === 'internal')
+
+  const transferTx = []   // raw tx → pairTransfers
+  const outToDir   = []   // โอนออกให้กรรมการ  { t, person }
+  const inFromDir  = []   // โอนเข้าจากกรรมการ { t, person }
+  const dividends  = []   // ปันผลกรรมการ      { t, person }
+  const salaries   = []   // เงินเดือน          { t, person }
+
+  const getInternalPerson = (memo, excludeName = '') =>
+    findInternalDirectorCounterparty(memo, excludeName)?.name || null
+
+  for (const t of rows) {
+    if (!t.memo || t.amount === 0) continue
+    const memo   = t.memo
+    const absAmt = Math.abs(t.amount)
+    const day    = t.date ? parseInt(t.date.split('-')[2]) : 99
+    const sourceInternal = findInternalSource(t.account)
+    const targetInternal = sourceInternal
+      ? findInternalCounterparty(memo, sourceInternal.name || '')
+      : null
+
+    // A. Manual override (transactions.category)
+    if (INTERNAL_TYPES.has(t.category)) {
+      // ถ้าต้นทางและปลายทางอยู่ใน "บัญชีภายใน" ทั้งคู่
+      // ให้ถือเป็นโอนระหว่างบัญชีเสมอ ยกเว้นหมวดเฉพาะที่ต้องแยกเอง
+      if (sourceInternal && targetInternal && t.category !== INTERNAL_TYPE_SALARY && t.category !== 'ปันผลกรรมการ') {
+        transferTx.push(t)
+        continue
+      }
+      const person = getInternalPerson(memo, sourceInternal?.name || '')
+      if (t.category === 'โอนระหว่างบัญชี') {
+        transferTx.push(t)
+      } else if (person) {
+        if      (t.category === 'โอนออกให้กรรมการ')  outToDir.push({ t, person })
+        else if (t.category === 'โอนเข้าจากกรรมการ') inFromDir.push({ t, person })
+        else if (t.category === 'ปันผลกรรมการ')      dividends.push({ t, person })
+        else if (t.category === INTERNAL_TYPE_SALARY)  salaries.push({ t, person })
+      }
+      // 'อื่นๆ' → ไม่แสดง
+      continue
+    }
+
+    // B. Salary heuristic: outgoing ~15,000 in the first days of month
+    if (t.amount < 0 && absAmt >= SALARY_RANGE.min && absAmt <= SALARY_RANGE.max && day <= SALARY_DAY_MAX) {
+      const person = getInternalPerson(memo, sourceInternal?.name || '')
+      if (person) {
+        salaries.push({ t, person })
+        continue
+      }
+    }
+
+    // C. โอนระหว่างบัญชีจะแสดงเฉพาะรายการที่ต้นทางและปลายทางอยู่ใน "บัญชีภายใน"
+    if (sourceInternal && targetInternal) {
+      transferTx.push(t)
+      continue
+    }
+
+    // D. Fallback: ชัยวัฒน์ advance X-codes
+    if (CHAIYAWAT_CODES.some(k => memo.includes(k))) {
+      const name = intContacts.find(c => c.name.includes('ชัยวัฒน์'))?.name || 'ชัยวัฒน์ เทพจันทร์'
+      if (t.amount < 0) outToDir.push({ t, person: name })
+      else               inFromDir.push({ t, person: name })
+      continue
+    }
+  }
+
+  return { transfers: pairTransfers(transferTx), outToDir, inFromDir, dividends, salaries }
+}
+
+function pairTransfers(txList) {
+  const used   = new Set()
+  const result = []
+  const sorted = [...txList].sort((a, b) => a.date.localeCompare(b.date))
+
+  for (let i = 0; i < sorted.length; i++) {
+    if (used.has(i)) continue
+    const a = sorted[i]
+    let matchIdx = -1
+
+    for (let j = i + 1; j < sorted.length; j++) {
+      if (used.has(j)) continue
+      const b = sorted[j]
+      const dayDiff = (new Date(b.date) - new Date(a.date)) / 86400000
+      if (dayDiff > 3) break
+      if (displayInternalAccount(a.account) === displayInternalAccount(b.account)) continue
+      if (Math.abs(Math.abs(a.amount) - Math.abs(b.amount)) > 0.01) continue
+      matchIdx = j; break
+    }
+
+    used.add(i)
+    if (matchIdx >= 0) {
+      used.add(matchIdx)
+      const b    = sorted[matchIdx]
+      const from = a.amount < 0 ? a : b
+      const to   = a.amount < 0 ? b : a
+      result.push({
+        date:      from.date,
+        direction: `${displayInternalAccount(from.account)} → ${displayInternalAccount(to.account)}`,
+        amount:    Math.abs(from.amount),
+        status:    'confirmed',
+        txId:      String(from.id),
+      })
+    } else {
+      const source = displayInternalAccount(a.account)
+      const other = findInternalCounterparty(a.memo, source)?.name || '?'
+      result.push({
+        date:      a.date,
+        direction: a.amount < 0
+          ? `${source} → ${other}`
+          : `${other} → ${source}`,
+        amount:    Math.abs(a.amount),
+        status:    'pending',
+        txId:      String(a.id),
+      })
+    }
+  }
+  return result.sort((a, b) => b.date.localeCompare(a.date))
+}
+
+// ---- Save manual type override → transactions.category ----
+async function saveInternalType(txId, newType) {
+  try {
+    const { error } = await db.from('transactions').update({ category: newType }).eq('id', txId)
+    if (error) throw error
+    const tx = allTransactions.find(t => String(t.id) === String(txId))
+    if (tx) tx.category = newType
+    if (typeof renderTransferTab === 'function') renderTransferTab()
+  } catch (e) {
+    alert('บันทึกไม่สำเร็จ: ' + e.message)
+  }
+}
+
+function openTypeSelect(cellEl, txId, currentType) {
+  const opts = ['โอนระหว่างบัญชี', 'โอนออกให้กรรมการ', 'โอนเข้าจากกรรมการ', 'ปันผลกรรมการ', INTERNAL_TYPE_SALARY, 'อื่นๆ']
+  cellEl.innerHTML = `<select onchange="saveInternalType('${txId}', this.value)"
+    onblur="renderTransferTab()"
+    class="text-xs border border-indigo-300 rounded px-1.5 py-0.5 bg-white focus:outline-none focus:ring-1 focus:ring-indigo-400">
+    ${opts.map(o => `<option value="${o}" ${o === currentType ? 'selected' : ''}>${o}</option>`).join('')}
+  </select>`
+  cellEl.querySelector('select')?.focus()
+}
+
+function showSyncToast(msg, type = 'info') {
+  const old = document.getElementById('sync-toast')
+  if (old) old.remove()
+  const bg = { info: 'bg-gray-700', green: 'bg-green-600', red: 'bg-red-500' }[type] || 'bg-gray-700'
+  const el = document.createElement('div')
+  el.id = 'sync-toast'
+  el.className = `fixed bottom-6 left-1/2 -translate-x-1/2 ${bg} text-white text-sm font-medium px-5 py-2.5 rounded-xl shadow-lg z-[100] pointer-events-none`
+  el.textContent = msg
+  document.body.appendChild(el)
+  setTimeout(() => { el.style.transition = 'opacity 0.3s'; el.style.opacity = '0' }, 2700)
+  setTimeout(() => el.remove(), 3000)
 }

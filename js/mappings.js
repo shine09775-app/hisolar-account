@@ -1,5 +1,5 @@
 // ================================================================
-//  CATEGORY MAP  —  แก้ไขไฟล์นี้เพื่อ maintain การจัดกลุ่มบัญชี
+//  CATEGORY MAP — แก้ไขไฟล์นี้เพื่อ maintain การจัดกลุ่มบัญชี
 //
 //  keywords : ข้อความที่ค้นหาใน description ของรายการธนาคาร
 //             แนะนำใส่รหัสบัญชี "X####" เพื่อความแม่นยำ
@@ -40,7 +40,7 @@ const CATEGORY_MAP = [
   {
     group: 'KLUNGFAIFA',
     color: '#eab308',
-    keywords: ['X8707', 'KLUNGFAIFA', 'คลังฟ้า'],
+    keywords: ['X8707', 'KLUNGFAIFA', 'คลังฟ่า'],
   },
   {
     group: 'วีระชัยการไฟฟ้า',
@@ -48,7 +48,7 @@ const CATEGORY_MAP = [
     keywords: ['X6592', 'วีระชัย'],
   },
   {
-    group: 'เอเอ็มออโต',
+    group: 'เอเอ็มเอ็มออโต้',
     color: '#22c55e',
     keywords: ['X9482'],
   },
@@ -70,18 +70,20 @@ const CATEGORY_MAP = [
 ]
 
 // ================================================================
-//  ACCOUNT LABELS  —  กำหนดชื่อแสดงของแต่ละบัญชี
+//  ACCOUNT LABELS — กำหนดชื่อแสดงของแต่ละบัญชี
 //  match : ฟังก์ชันตรวจว่า account string ที่เก็บใน DB ตรงกับบัญชีนี้ไหม
 // ================================================================
 const ACCOUNT_LABELS = [
   {
+    key: 'company',
     display: 'บัญชีบริษัท',
-    match: (a) => !a ? false : ['hisolar', '098-1-85467-5', 'แฮ้โซลาร์', 'hi solar', 'sun energy']
+    match: (a) => !a ? false : ['hisolar', '098-1-85467-5', 'ไฮโซลาร์', 'hi solar', 'sun energy']
       .some(k => a.toLowerCase().includes(k)),
   },
   {
+    key: 'joint',
     display: 'บัญชีคู่',
-    match: (a) => !a ? false : ['098-3-36149-8', 'อาภาพร', 'วสันต์', 'บัญชีคู่', 'pany']
+    match: (a) => !a ? false : ['098-3-36149-8', 'บัญชีคู่']
       .some(k => a.toLowerCase().includes(k)),
   },
 ]
@@ -102,8 +104,8 @@ function extractCounterparty(memo) {
   if (m) return m[1].trim().replace(/\+\+\s*$/, '')
   // กรณีพิเศษ
   if (memo.includes('กรมสรรพากร')) return 'กรมสรรพากร'
-  if (memo.includes('HOMEPRO'))    return 'HomePro'
-  if (memo.includes('SMS'))        return 'ค่าบริการ SMS'
+  if (memo.includes('HOMEPRO')) return 'HomePro'
+  if (memo.includes('SMS')) return 'ค่าบริการ SMS'
   if (memo.includes('QR Payment')) return 'QR Payment'
   // fallback
   return memo.replace(/\+\+\s*$/, '').trim().substring(0, 45)
