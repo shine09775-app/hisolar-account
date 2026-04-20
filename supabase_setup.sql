@@ -58,6 +58,14 @@ create policy "allow_all_contacts" on contacts for all using (true) with check (
 -- alter table contacts add constraint contacts_type_check
 --   check (type in ('customer', 'supplier', 'internal'));
 
+-- 6. ตาราง transaction_vat — เก็บ flag ว่า transaction นั้น มี VAT หรือไม่
+create table if not exists transaction_vat (
+  transaction_id text primary key,
+  created_at     timestamptz default now()
+);
+alter table transaction_vat enable row level security;
+create policy "allow_all_vat" on transaction_vat for all using (true) with check (true);
+
 -- 4. สร้าง Storage Bucket "attachments" (public = เปิดดูได้โดยไม่ต้อง login)
 insert into storage.buckets (id, name, public)
 values ('attachments', 'attachments', true)
