@@ -13,9 +13,11 @@
   <!-- Navbar -->
   <nav class="bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-6">
     <span class="font-bold text-yellow-500 text-lg">☀ Hi Solar</span>
-    <a href="index.html"   class="text-sm text-yellow-600 font-semibold border-b-2 border-yellow-400 pb-1">Dashboard</a>
-    <a href="upload.html"  class="text-sm text-gray-500 hover:text-gray-800">Upload</a>
-    <a href="history.html" class="text-sm text-gray-500 hover:text-gray-800">ประวัติ Upload</a>
+    <a href="index.html"    class="text-sm text-yellow-600 font-semibold border-b-2 border-yellow-400 pb-1">Dashboard</a>
+    <a href="upload.html"   class="text-sm text-gray-500 hover:text-gray-800">Upload</a>
+    <a href="history.html"  class="text-sm text-gray-500 hover:text-gray-800">ประวัติ Upload</a>
+    <a href="maintain.html" class="text-sm text-gray-500 hover:text-gray-800">Maintain</a>
+    <a href="contacts.html" class="text-sm text-gray-500 hover:text-gray-800">สมุดรายชื่อ</a>
   </nav>
 
   <main class="max-w-7xl mx-auto px-4 py-8 space-y-6">
@@ -77,9 +79,19 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs text-gray-500 mb-1">หมวดหมู่</label>
-            <select id="filter-category" name="category"
+            <label class="block text-xs text-gray-500 mb-1">ประเภท</label>
+            <select id="filter-contact-type" name="contact-type"
               class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+              <option value="">ทั้งหมด</option>
+              <option value="customer">ลูกค้า</option>
+              <option value="supplier">ผู้แทนจำหน่าย</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">รายชื่อตามสมุด</label>
+            <select id="filter-contact-name" name="contact-name"
+              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+              <option value="">ทั้งหมด</option>
             </select>
           </div>
           <div>

@@ -3,11 +3,68 @@
 let allTransactions = []
 let chartIncome, chartExpenseGroup, chartIncomeCustomer
 
+// Maintain lookup maps: key = "YYYY-MM-DD|amount" → display name
+let incomeMap  = {}   // amount > 0
+let expenseMap = {}   // amount (positive value)
+
+// Contacts lookup: account_number/code → { name, type }
+let contactMap  = {}
+let allContacts = []
+
 async function initDashboard() {
   await Auth.guard()
-  await loadTransactions()
+  await Promise.all([loadTransactions(), loadMaintainRecords(), loadContactsMap()])
   renderAll(allTransactions)
   setupFilters()
+}
+
+// ---- Load contacts from สมุดรายชื่อ & build lookup map ----
+async function loadContactsMap() {
+  const { data } = await db.from('contacts').select('name, account_number, type')
+  allContacts = data || []
+  contactMap  = {}
+  ;(data || []).forEach(c => {
+    if (c.account_number) contactMap[c.account_number] = { name: c.name, type: c.type }
+  })
+}
+
+// คืน { name, type } จากสมุดรายชื่อหรือ maintain records
+function getContactInfo(t) {
+  // Priority 1: maintain records (date+amount exact match)
+  const maintained = getMaintainedName(t)
+  if (maintained) return { name: maintained, type: t.amount > 0 ? 'customer' : 'supplier', source: 'maintain' }
+  // Priority 2: contacts by account_number appearing in memo
+  if (t.memo) {
+    for (const [code, contact] of Object.entries(contactMap)) {
+      if (code && t.memo.includes(code)) return { name: contact.name, type: contact.type, source: 'contact' }
+    }
+  }
+  return null
+}
+
+// ---- Load maintain records & build lookup maps ----
+async function loadMaintainRecords() {
+  const [{ data: inc }, { data: exp }] = await Promise.all([
+    db.from('income_records').select('transaction_date, amount, customer_name'),
+    db.from('expense_records').select('transaction_date, amount, supplier_name'),
+  ])
+  incomeMap = {}
+  ;(inc || []).forEach(r => {
+    if (r.transaction_date && r.amount != null)
+      incomeMap[`${r.transaction_date}|${r.amount}`] = r.customer_name
+  })
+  expenseMap = {}
+  ;(exp || []).forEach(r => {
+    if (r.transaction_date && r.amount != null)
+      expenseMap[`${r.transaction_date}|${r.amount}`] = r.supplier_name
+  })
+}
+
+// คืนชื่อที่ maintain ไว้ (ถ้ามี) สำหรับ transaction นั้น
+function getMaintainedName(t) {
+  if (t.amount > 0) return incomeMap[`${t.date}|${t.amount}`]  || null
+  if (t.amount < 0) return expenseMap[`${t.date}|${Math.abs(t.amount)}`] || null
+  return null
 }
 
 // ---- Load from Supabase (date / search — account+category กรองฝั่ง client) ----
@@ -22,11 +79,18 @@ async function loadTransactions(filters = {}) {
   allTransactions = data || []
 }
 
-// ---- Client-side filters: account (display name) + category group ----
-function applyClientFilter(rows, { account = '', category = '' } = {}) {
+// ---- Client-side filters: account + contactType + contactName ----
+function applyClientFilter(rows, { account = '', contactType = '', contactName = '' } = {}) {
   let result = rows
-  if (account)  result = result.filter(t => displayAccount(t.account) === account)
-  if (category) result = result.filter(t => resolveCategory(t.memo)   === category)
+  if (account) result = result.filter(t => displayAccount(t.account) === account)
+  if (contactType === 'customer') result = result.filter(t => t.amount > 0)
+  else if (contactType === 'supplier') result = result.filter(t => t.amount < 0)
+  if (contactName) {
+    result = result.filter(t => {
+      const info = getContactInfo(t)
+      return info && info.name === contactName
+    })
+  }
   return result
 }
 
@@ -153,7 +217,9 @@ function renderExpenseGroupChart(rows) {
 
   const groups = {}
   for (const t of rows.filter(t => t.amount < 0)) {
-    const grp = resolveCategory(t.memo)
+    const info = getContactInfo(t)
+    if (info?.type === 'internal') continue  // ข้ามรายการโอนภายใน
+    const grp = (info && info.type === 'supplier') ? info.name : resolveCategory(t.memo)
     groups[grp] = (groups[grp] || 0) + Math.abs(t.amount)
   }
   const sorted = Object.entries(groups).sort((a, b) => b[1] - a[1]).slice(0, 10)
@@ -189,7 +255,9 @@ function renderIncomeCustomerChart(rows) {
 
   const customers = {}
   for (const t of rows.filter(t => t.amount > 0)) {
-    const name = extractCounterparty(t.memo)
+    const info = getContactInfo(t)
+    if (info?.type === 'internal') continue  // ข้ามรายการโอนภายใน
+    const name = info ? info.name : extractCounterparty(t.memo)
     if (name && name !== '—') customers[name] = (customers[name] || 0) + t.amount
   }
   const sorted = Object.entries(customers).sort((a, b) => b[1] - a[1])
@@ -231,7 +299,18 @@ function renderTable(rows) {
   }
 
   tbody.innerHTML = rows.slice(0, 500).map(t => {
-    const counterparty = extractCounterparty(t.memo)
+    const info         = getContactInfo(t)
+    const counterparty = info ? info.name : extractCounterparty(t.memo)
+    const badge = info?.type === 'internal'
+      ? `<span class="ml-1.5 text-[10px] bg-slate-100 text-slate-500 rounded px-1 py-0.5 font-medium align-middle">ภายใน</span>`
+      : info?.source === 'maintain'
+        ? `<span class="ml-1.5 text-[10px] bg-indigo-100 text-indigo-500 rounded px-1 py-0.5 font-medium align-middle">M</span>`
+        : info?.source === 'contact'
+          ? `<span class="ml-1.5 text-[10px] bg-green-100 text-green-600 rounded px-1 py-0.5 font-medium align-middle">สมุด</span>`
+          : ''
+    const nameCell = info
+      ? `<span class="text-indigo-700 font-semibold">${counterparty}</span>${badge}`
+      : `<span>${counterparty}</span>`
     const income  = t.amount > 0
       ? `<span class="text-green-600 font-semibold">${formatBaht(t.amount)}</span>` : ''
     const expense = t.amount < 0
@@ -239,7 +318,7 @@ function renderTable(rows) {
     return `<tr class="border-t border-gray-100 hover:bg-gray-50 transition-colors">
       <td class="px-4 py-2 text-sm text-gray-600 whitespace-nowrap">${formatDate(t.date)}</td>
       <td class="px-4 py-2 text-sm text-gray-700">${displayAccount(t.account)}</td>
-      <td class="px-4 py-2 text-sm text-gray-800 font-medium max-w-[180px] truncate" title="${counterparty}">${counterparty}</td>
+      <td class="px-4 py-2 text-sm max-w-[200px] truncate" title="${counterparty}">${nameCell}</td>
       <td class="px-4 py-2 text-sm text-gray-500 max-w-xs truncate" title="${t.memo || ''}">${t.memo || '—'}</td>
       <td class="px-4 py-2 text-sm text-right whitespace-nowrap">${income}</td>
       <td class="px-4 py-2 text-sm text-right whitespace-nowrap">${expense}</td>
@@ -248,27 +327,40 @@ function renderTable(rows) {
 }
 
 // ---- Filters ----
+function populateContactNameDropdown(type = '') {
+  const filtered = type ? allContacts.filter(c => c.type === type) : allContacts
+  const names    = [...new Set(filtered.map(c => c.name))].sort()
+  populateSelect('filter-contact-name', names)
+}
+
 function setupFilters() {
-  // dropdown บัญชี: ใช้ชื่อแสดงจาก ACCOUNT_LABELS (ไม่ใช่ค่าดิบจาก DB)
-  populateSelect('filter-account',  ACCOUNT_LABELS.map(l => l.display))
-  // dropdown หมวดหมู่: กลุ่ม Supplier จาก CATEGORY_MAP (กรองฝั่ง client)
-  populateSelect('filter-category', CATEGORY_MAP.map(c => c.group).concat(['อื่นๆ']))
+  populateSelect('filter-account', ACCOUNT_LABELS.map(l => l.display))
+  populateContactNameDropdown()
+
+  // ประเภท filter เปลี่ยน → อัปเดต dropdown รายชื่อ
+  document.getElementById('filter-contact-type')?.addEventListener('change', e => {
+    populateContactNameDropdown(e.target.value)
+    document.getElementById('filter-contact-name').value = ''
+  })
 
   document.getElementById('filter-form')?.addEventListener('submit', async (e) => {
     e.preventDefault()
     const f = new FormData(e.target)
 
-    // โหลดจาก Supabase: date + search เท่านั้น
-    await loadTransactions({
-      dateFrom: f.get('date-from') || '',
-      dateTo:   f.get('date-to')   || '',
-      search:   f.get('search')    || '',
-    })
+    await Promise.all([
+      loadTransactions({
+        dateFrom: f.get('date-from') || '',
+        dateTo:   f.get('date-to')   || '',
+        search:   f.get('search')    || '',
+      }),
+      loadMaintainRecords(),
+      loadContactsMap(),
+    ])
 
-    // กรองฝั่ง client: account + category
     const rows = applyClientFilter(allTransactions, {
-      account:  f.get('account')  || '',
-      category: f.get('category') || '',
+      account:     f.get('account')       || '',
+      contactType: f.get('contact-type')  || '',
+      contactName: f.get('contact-name')  || '',
     })
     renderAll(rows)
     setText('tx-count', `แสดง ${Math.min(rows.length, 500)} จาก ${rows.length} รายการ`)
@@ -276,7 +368,8 @@ function setupFilters() {
 
   document.getElementById('filter-reset')?.addEventListener('click', async () => {
     document.getElementById('filter-form')?.reset()
-    await loadTransactions()
+    populateContactNameDropdown()
+    await Promise.all([loadTransactions(), loadMaintainRecords(), loadContactsMap()])
     renderAll(allTransactions)
     setText('tx-count', `แสดง ${Math.min(allTransactions.length, 500)} จาก ${allTransactions.length} รายการ`)
   })
