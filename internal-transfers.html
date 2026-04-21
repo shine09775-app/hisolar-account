@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hi Solar — โอนระหว่างบัญชี</title>
+  <title>Hi Solar - โอนระหว่างบัญชี</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -37,15 +37,19 @@
       </div>
     </div>
 
-    <div class="bg-white rounded-2xl border border-gray-200 p-4 text-sm text-gray-500 shadow-sm">
-      แสดงเฉพาะรายการภายในระหว่างบัญชีบริษัท, บัญชีคู่ และบัญชีของกรรมการที่กำหนดไว้ในเมนู <a href="contacts.html" class="text-yellow-600 hover:underline">สมุดรายชื่อ</a> แท็บ <span class="font-medium">🏦 บัญชีภายใน</span>
+    <div class="bg-white rounded-2xl border border-gray-200 p-5 text-sm text-gray-600 shadow-sm leading-7">
+      <div>หน้านี้แสดงเฉพาะธุรกรรมภายในของ 3 กลุ่มบัญชีจากเมนู <a href="contacts.html" class="text-yellow-600 hover:underline">สมุดรายชื่อ</a> แท็บ <span class="font-semibold">🏦 บัญชีภายใน</span></div>
+      <div class="mt-2">บัญชีบริษัท = บัญชีหลักของบริษัท</div>
+      <div>บัญชีคู่ = บัญชีร่วมของ น.ส. อาภาพร เทพจันทร์ และ นาย วสันต์ ปานแย้ม</div>
+      <div>บัญชีกรรมการ = ทุกบัญชีส่วนตัวของกรรมการ 3 คน คือ น.ส. อาภาพร เทพจันทร์, นาย วสันต์ ปานแย้ม, นายชัยวัฒน์ เทพจันทร์</div>
+      <div class="mt-2 text-gray-500">ระบบจะไม่นำบัญชีภายในอื่นที่ไม่ใช่ 3 กลุ่มนี้มาแสดงในหน้านี้</div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
       <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-100">
-          <h2 class="font-semibold text-gray-800">รายการภายใน — โอน / เงินเดือน / Advance / ปันผล</h2>
+          <h2 class="font-semibold text-gray-800">รายการภายใน — โอนระหว่างบัญชี / โอนออกให้กรรมการ / โอนเข้าจากกรรมการ / เงินเดือน / เคลียร์การเบิกจ่าย / ปันผลกรรมการ / อื่นๆ</h2>
         </div>
         <div class="overflow-x-auto">
           <table class="min-w-full text-sm">
@@ -67,19 +71,19 @@
 
       <div class="flex flex-col gap-4">
         <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-          <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">โอนระหว่างบัญชี</p>
-          <p id="tr-total-pair-to-main" class="text-2xl font-bold text-purple-600">—</p>
-          <p class="text-xs text-gray-400 mt-1">บาท (ยืนยันแล้ว)</p>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">โอนระหว่างบัญชีบริษัท ↔ บัญชีคู่</p>
+          <p id="tr-total-company-joint" class="text-2xl font-bold text-purple-600">—</p>
+          <p class="text-xs text-gray-400 mt-1">บาท</p>
         </div>
         <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-          <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">โอนออกให้กรรมการ / เงินเดือน</p>
-          <p id="tr-total-main-to-pair" class="text-2xl font-bold text-pink-500">—</p>
-          <p class="text-xs text-gray-400 mt-1">บาท (รวมเงินเดือน + อื่นๆ)</p>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">โอนออกให้กรรมการ / เงินเดือน / ปันผลกรรมการ</p>
+          <p id="tr-total-out-director" class="text-2xl font-bold text-pink-500">—</p>
+          <p class="text-xs text-gray-400 mt-1">บาท</p>
         </div>
         <div class="bg-amber-50 rounded-2xl border border-amber-200 p-5 shadow-sm">
           <p class="text-xs text-amber-600 uppercase tracking-wide mb-1 font-semibold">⚠ รอยืนยัน</p>
           <p id="tr-total-pending" class="text-2xl font-bold text-amber-600">—</p>
-          <p class="text-xs text-amber-500 mt-1">บาท (พบฝั่งเดียว)</p>
+          <p class="text-xs text-amber-500 mt-1">บาท (พบเฉพาะฝั่งเดียว)</p>
         </div>
         <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
           <p class="text-xs text-gray-500 font-semibold mb-3">สัดส่วนรายการภายใน</p>

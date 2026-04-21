@@ -104,7 +104,7 @@ function openModal(id = null) {
       <div>
         <label class="label">ชื่อ <span class="text-red-400">*</span></label>
         <input id="f-name" type="text" value="${esc(r?.name || '')}" class="input"
-          placeholder="${isInternal ? 'เช่น บัญชีบริษัท, บัญชีคู่, บัญชีกรรมการ' : 'ชื่อลูกค้า หรือ ชื่อผู้จำหน่าย'}">
+          placeholder="${isInternal ? 'เช่น บัญชีบริษัท, บัญชีคู่, บัญชีบุคคล (กรรมการ)' : 'ชื่อลูกค้า หรือ ชื่อผู้จำหน่าย'}">
       </div>
       <div>
         <label class="label">เลขบัญชี / รหัสธุรกรรม</label>
@@ -129,7 +129,7 @@ function openModal(id = null) {
       </div>
       <div>
         <label class="label">หมายเหตุ</label>
-        <textarea id="f-notes" rows="2" class="input resize-none" placeholder="หมายเหตุเพิ่มเติม...">${esc(r?.notes || '')}</textarea>
+        <textarea id="f-notes" rows="2" class="input resize-none" placeholder="${isInternal ? 'เช่น บัญชีบริษัท / บัญชีคู่ / บัญชีกรรมการ' : 'หมายเหตุเพิ่มเติม...'}">${esc(r?.notes || '')}</textarea>
       </div>
     </div>`
 

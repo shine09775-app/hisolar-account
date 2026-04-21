@@ -1,16 +1,16 @@
-// ================================================================
-//  CATEGORY MAP — แก้ไขไฟล์นี้เพื่อ maintain การจัดกลุ่มบัญชี
+﻿// ================================================================
+//  CATEGORY MAP â€” à¹à¸à¹‰à¹„à¸‚à¹„à¸Ÿà¸¥à¹Œà¸™à¸µà¹‰à¹€à¸žà¸·à¹ˆà¸­ maintain à¸à¸²à¸£à¸ˆà¸±à¸”à¸à¸¥à¸¸à¹ˆà¸¡à¸šà¸±à¸à¸Šà¸µ
 //
-//  keywords : ข้อความที่ค้นหาใน description ของรายการธนาคาร
-//             แนะนำใส่รหัสบัญชี "X####" เพื่อความแม่นยำ
-//  group    : ชื่อหมวดหมู่ / Supplier ที่แสดงในกราฟและรายงาน
-//  color    : สีในกราฟ (CSS hex)
+//  keywords : à¸‚à¹‰à¸­à¸„à¸§à¸²à¸¡à¸—à¸µà¹ˆà¸„à¹‰à¸™à¸«à¸²à¹ƒà¸™ description à¸‚à¸­à¸‡à¸£à¸²à¸¢à¸à¸²à¸£à¸˜à¸™à¸²à¸„à¸²à¸£
+//             à¹à¸™à¸°à¸™à¸³à¹ƒà¸ªà¹ˆà¸£à¸«à¸±à¸ªà¸šà¸±à¸à¸Šà¸µ "X####" à¹€à¸žà¸·à¹ˆà¸­à¸„à¸§à¸²à¸¡à¹à¸¡à¹ˆà¸™à¸¢à¸³
+//  group    : à¸Šà¸·à¹ˆà¸­à¸«à¸¡à¸§à¸”à¸«à¸¡à¸¹à¹ˆ / Supplier à¸—à¸µà¹ˆà¹à¸ªà¸”à¸‡à¹ƒà¸™à¸à¸£à¸²à¸Ÿà¹à¸¥à¸°à¸£à¸²à¸¢à¸‡à¸²à¸™
+//  color    : à¸ªà¸µà¹ƒà¸™à¸à¸£à¸²à¸Ÿ (CSS hex)
 // ================================================================
 const CATEGORY_MAP = [
   {
     group: 'บ้านทุ่งรุ่ง',
     color: '#dc2626',
-    keywords: ['X8049', 'X1376', 'บ้านทุ่งรุ้', 'บ้านทุ่งรุ่ง'],
+    keywords: ['X8049', 'X1376', 'บ้านทุ่งรุ้ง', 'บ้านทุ่งรุ่ง'],
   },
   {
     group: 'KSHER',
@@ -38,9 +38,9 @@ const CATEGORY_MAP = [
     keywords: ['X3006', 'X8624'],
   },
   {
-    group: 'KLUNGFAIFA',
+    group: 'คลังไฟฟ้า',
     color: '#eab308',
-    keywords: ['X8707', 'KLUNGFAIFA', 'คลังฟ่า'],
+    keywords: ['X8707', 'KLUNGFAIFA', 'คลังไฟฟ้า'],
   },
   {
     group: 'วีระชัยการไฟฟ้า',
@@ -48,7 +48,7 @@ const CATEGORY_MAP = [
     keywords: ['X6592', 'วีระชัย'],
   },
   {
-    group: 'เอเอ็มเอ็มออโต้',
+    group: 'เอ็มเอ็มออโต้',
     color: '#22c55e',
     keywords: ['X9482'],
   },
@@ -70,39 +70,42 @@ const CATEGORY_MAP = [
 ]
 
 // ================================================================
-//  ACCOUNT LABELS — กำหนดชื่อแสดงของแต่ละบัญชี
-//  match : ฟังก์ชันตรวจว่า account string ที่เก็บใน DB ตรงกับบัญชีนี้ไหม
+//  ACCOUNT LABELS â€” à¸à¸³à¸«à¸™à¸”à¸Šà¸·à¹ˆà¸­à¹à¸ªà¸”à¸‡à¸‚à¸­à¸‡à¹à¸•à¹ˆà¸¥à¸°à¸šà¸±à¸à¸Šà¸µ
+//  match : à¸Ÿà¸±à¸‡à¸à¹Œà¸Šà¸±à¸™à¸•à¸£à¸§à¸ˆà¸§à¹ˆà¸² account string à¸—à¸µà¹ˆà¹€à¸à¹‡à¸šà¹ƒà¸™ DB à¸•à¸£à¸‡à¸à¸±à¸šà¸šà¸±à¸à¸Šà¸µà¸™à¸µà¹‰à¹„à¸«à¸¡
 // ================================================================
 const ACCOUNT_LABELS = [
   {
     key: 'company',
     display: 'บัญชีบริษัท',
-    match: (a) => !a ? false : ['hisolar', '098-1-85467-5', 'ไฮโซลาร์', 'hi solar', 'sun energy']
+    match: (a) => !a ? false : ['hisolar', '098-1-85467-5', 'à¹„à¸®à¹‚à¸‹à¸¥à¸²à¸£à¹Œ', 'hi solar', 'sun energy']
       .some(k => a.toLowerCase().includes(k)),
   },
   {
     key: 'joint',
     display: 'บัญชีคู่',
-    match: (a) => !a ? false : ['098-3-36149-8', 'บัญชีคู่']
+    match: (a) => !a ? false : ['098-3-36149-8', 'à¸šà¸±à¸à¸Šà¸µà¸„à¸¹à¹ˆ']
       .some(k => a.toLowerCase().includes(k)),
   },
 ]
 
-// คืนชื่อแสดงจากค่า account ดิบใน DB
+// à¸„à¸·à¸™à¸Šà¸·à¹ˆà¸­à¹à¸ªà¸”à¸‡à¸ˆà¸²à¸à¸„à¹ˆà¸² account à¸”à¸´à¸šà¹ƒà¸™ DB
 function displayAccount(raw) {
   if (!raw) return '—'
+  if (String(raw).includes('à¸šà¸±à¸à¸Šà¸µà¸šà¸£à¸´à¸©à¸±à¸—')) return 'บัญชีบริษัท'
+  if (String(raw).includes('à¸šà¸±à¸à¸Šà¸µà¸„à¸¹à¹ˆ')) return 'บัญชีคู่'
+  if (String(raw).includes('น.ส. อาภาพร เทพจันทร์ และ นาย วสันต์ ปานแย้ม')) return 'บัญชีคู่'
   const found = ACCOUNT_LABELS.find(l => l.match(raw))
   return found ? found.display : raw
 }
 
 // ---- Extract counterparty name from memo/description ----
-// ดึงชื่อผู้โอน/ผู้รับโอนจาก description ของธนาคาร
+// à¸”à¸¶à¸‡à¸Šà¸·à¹ˆà¸­à¸œà¸¹à¹‰à¹‚à¸­à¸™/à¸œà¸¹à¹‰à¸£à¸±à¸šà¹‚à¸­à¸™à¸ˆà¸²à¸ description à¸‚à¸­à¸‡à¸˜à¸™à¸²à¸„à¸²à¸£
 function extractCounterparty(memo) {
   if (!memo) return '—'
-  // รูปแบบ: [ธนาคาร?] X#### [ชื่อ]++
+  // à¸£à¸¹à¸›à¹à¸šà¸š: [à¸˜à¸™à¸²à¸„à¸²à¸£?] X#### [à¸Šà¸·à¹ˆà¸­]++
   const m = memo.match(/X\d{4}\s+([^+\n]{2,50})/)
   if (m) return m[1].trim().replace(/\+\+\s*$/, '')
-  // กรณีพิเศษ
+  // à¸à¸£à¸“à¸µà¸žà¸´à¹€à¸¨à¸©
   if (memo.includes('กรมสรรพากร')) return 'กรมสรรพากร'
   if (memo.includes('HOMEPRO')) return 'HomePro'
   if (memo.includes('SMS')) return 'ค่าบริการ SMS'
@@ -112,7 +115,7 @@ function extractCounterparty(memo) {
 }
 
 // ---- Resolve category group from memo ----
-// คืนชื่อกลุ่ม Supplier จาก CATEGORY_MAP
+// à¸„à¸·à¸™à¸Šà¸·à¹ˆà¸­à¸à¸¥à¸¸à¹ˆà¸¡ Supplier à¸ˆà¸²à¸ CATEGORY_MAP
 function resolveCategory(memo) {
   if (!memo) return 'อื่นๆ'
   for (const { group, keywords } of CATEGORY_MAP) {
@@ -120,3 +123,4 @@ function resolveCategory(memo) {
   }
   return 'อื่นๆ'
 }
+

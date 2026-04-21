@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hi Solar — Dashboard</title>
+  <title>Hi Solar - Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -11,21 +11,18 @@
 </head>
 <body class="hs-dashboard-theme bg-gray-50 min-h-screen">
 
-  <!-- Navbar -->
   <nav class="hs-navbar bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-6">
     <span class="font-bold text-yellow-500 text-lg">☀ Hi Solar</span>
-    <a href="index.html"    class="nav-link is-active text-sm text-yellow-600 font-semibold border-b-2 border-yellow-400 pb-1">Dashboard</a>
+    <a href="index.html" class="nav-link is-active text-sm text-yellow-600 font-semibold border-b-2 border-yellow-400 pb-1">Dashboard</a>
     <a href="internal-transfers.html" class="nav-link text-sm text-gray-500 hover:text-gray-800">โอนระหว่างบัญชี</a>
-    <a href="upload.html"   class="nav-link text-sm text-gray-500 hover:text-gray-800">Upload</a>
-    <a href="history.html"  class="nav-link text-sm text-gray-500 hover:text-gray-800">Upload Log</a>
-    <a href="maintain.html" class="text-sm text-gray-500 hover:text-gray-800">ข้อมูลรายการ</a>
-    <a href="contacts.html" class="text-sm text-gray-500 hover:text-gray-800">สมุดรายชื่อ</a>
+    <a href="upload.html" class="nav-link text-sm text-gray-500 hover:text-gray-800">Upload</a>
+    <a href="history.html" class="nav-link text-sm text-gray-500 hover:text-gray-800">Upload Log</a>
+    <a href="maintain.html" class="nav-link text-sm text-gray-500 hover:text-gray-800">ข้อมูลรายการ</a>
+    <a href="contacts.html" class="nav-link text-sm text-gray-500 hover:text-gray-800">สมุดรายชื่อ</a>
   </nav>
 
   <main class="hs-main max-w-7xl mx-auto px-4 py-8 space-y-6">
-
-    <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between gap-4">
       <div>
         <h1 class="text-2xl font-bold text-gray-800">สรุปบัญชี Hi Solar</h1>
         <p id="data-range" class="text-sm text-gray-400 mt-0.5">กำลังโหลดข้อมูล...</p>
@@ -36,22 +33,17 @@
       </a>
     </div>
 
-    <!-- Tab Navigation -->
     <div class="flex gap-2 border-b border-gray-200">
-      <button data-tab="overview"
-        class="tab-btn px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-colors border-b-2 border-yellow-400 text-yellow-600 bg-white">
+      <span class="tab-btn px-5 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 border-yellow-400 text-yellow-600 bg-white">
         ภาพรวม 12 เดือน
-      </button>
-      <button data-tab="transfers"
-        class="tab-btn px-5 py-2.5 text-sm font-semibold rounded-t-lg transition-colors border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50">
+      </span>
+      <a href="internal-transfers.html"
+        class="tab-btn px-5 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors">
         โอนระหว่างบัญชี
-      </button>
+      </a>
     </div>
 
-    <!-- ===== TAB: ภาพรวม ===== -->
     <div id="tab-overview" class="space-y-6">
-
-      <!-- Summary Cards -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
           <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">รายรับรวม</p>
@@ -71,14 +63,12 @@
         </div>
       </div>
 
-      <!-- Filter Form -->
       <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
         <form id="filter-form" class="flex flex-wrap gap-3 items-end">
           <div>
             <label class="block text-xs text-gray-500 mb-1">บัญชี</label>
             <select id="filter-account" name="account"
-              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
-            </select>
+              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"></select>
           </div>
           <div>
             <label class="block text-xs text-gray-500 mb-1">ประเภท</label>
@@ -86,7 +76,8 @@
               class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
               <option value="">ทั้งหมด</option>
               <option value="customer">ลูกค้า</option>
-              <option value="supplier">ผู้แทนจำหน่าย</option>
+              <option value="supplier">ผู้จำหน่าย</option>
+              <option value="internal">บัญชีภายใน</option>
             </select>
           </div>
           <div>
@@ -109,7 +100,7 @@
           <div>
             <label class="block text-xs text-gray-500 mb-1">ค้นหารายละเอียด</label>
             <input type="text" name="search" placeholder="ค้นหา..."
-              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm w-40 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+              class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm w-44 focus:outline-none focus:ring-2 focus:ring-yellow-400">
           </div>
           <button type="submit"
             class="px-4 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white text-sm font-semibold rounded-lg transition-colors">
@@ -122,10 +113,7 @@
         </form>
       </div>
 
-      <!-- Charts Row: Monthly Bar (2/3) + 2 Pie Charts stacked (1/3) -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        <!-- Monthly Bar + Summary Table -->
         <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
           <div class="flex items-center justify-between mb-4">
             <h2 class="font-semibold text-gray-700">รายรับ / รายจ่าย รายเดือน</h2>
@@ -140,43 +128,39 @@
               </button>
             </div>
           </div>
-          <!-- Panel: รายเดือน -->
           <div id="monthly-panel">
             <canvas id="chart-monthly" height="140"></canvas>
             <div id="monthly-summary-table"></div>
           </div>
-          <!-- Panel: VAT -->
           <div id="vat-panel" class="hidden">
             <div id="vat-summary-table">
-              <p class="text-center py-8 text-gray-400 text-sm">เลือกรายการ VAT จากตารางด้านล่างก่อน</p>
+              <p class="text-center py-8 text-gray-400 text-sm">เลือกรายการ VAT จากตารางรายการธุรกรรมด้านล่างก่อน</p>
             </div>
           </div>
         </div>
 
-        <!-- Right: 2 Pie Charts stacked -->
         <div class="flex flex-col gap-4">
-
-          <!-- Expense by Supplier Group -->
           <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm flex-1">
             <h2 class="font-semibold text-gray-700 mb-2 text-sm">ค่าใช้จ่ายแยกกลุ่ม Supplier</h2>
             <canvas id="chart-expense-group"></canvas>
           </div>
-
-          <!-- Income by Customer -->
           <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm flex-1">
             <h2 class="font-semibold text-gray-700 mb-2 text-sm">รายรับแยกตามลูกค้า</h2>
             <canvas id="chart-income-customer"></canvas>
           </div>
-
         </div>
       </div>
 
-      <!-- Transaction Table -->
       <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 class="font-semibold text-gray-700">รายการธุรกรรม</h2>
           <div class="flex items-center gap-3">
             <span id="tx-count" class="text-xs text-gray-400"></span>
+            <button id="delete-joint-account-btn" onclick="reviewDuplicateTransactions()"
+              class="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 active:bg-red-200 text-red-600 text-xs font-semibold rounded-lg transition-colors border border-red-200 disabled:opacity-60"
+              title="ตรวจสอบรายการซ้ำของบัญชีคู่ แล้วขอยืนยันก่อนยุบรวม">
+              ตรวจสอบรายการซ้ำ
+            </button>
             <button id="auto-sync-btn" onclick="runAutoSync()"
               class="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 active:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm disabled:opacity-60">
               ⚡ Auto Sync
@@ -191,7 +175,7 @@
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">บัญชี</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">หมวดหมู่ / บัญชีคู่ค้า</th>
                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">รายละเอียด</th>
-                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase" title="ภาษีซื้อ / ภาษีขาย">VAT</th>
+                <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">VAT</th>
                 <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">รายรับ</th>
                 <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">รายจ่าย</th>
               </tr>
@@ -202,65 +186,9 @@
           </table>
         </div>
       </div>
-
-    </div><!-- end tab-overview -->
-
-    <!-- ===== TAB: โอนระหว่างบัญชี ===== -->
-    <div id="tab-transfers" class="hidden space-y-6">
-
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        <!-- Left: Transfer Table -->
-        <div class="lg:col-span-2 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          <div class="px-5 py-4 border-b border-gray-100">
-            <h2 class="font-semibold text-gray-800">รายการภายใน — โอน / เงินเดือน / Advance / ปันผล</h2>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="min-w-full text-sm">
-              <thead class="bg-slate-700 text-white">
-                <tr>
-                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">วันที่</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">ประเภท</th>
-                  <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide">ทิศทาง</th>
-                  <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide">จำนวน (บาท)</th>
-                  <th class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide">สถานะ</th>
-                </tr>
-              </thead>
-              <tbody id="transfer-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Right: Summary Cards + Pie -->
-        <div class="flex flex-col gap-4">
-          <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-            <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">โอนระหว่างบัญชี</p>
-            <p id="tr-total-pair-to-main" class="text-2xl font-bold text-purple-600">—</p>
-            <p class="text-xs text-gray-400 mt-1">บาท (ยืนยันแล้ว)</p>
-          </div>
-          <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-            <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">โอนออกให้กรรมการ</p>
-            <p id="tr-total-main-to-pair" class="text-2xl font-bold text-pink-500">—</p>
-            <p class="text-xs text-gray-400 mt-1">บาท (เงินเดือน + อื่นๆ)</p>
-          </div>
-          <div class="bg-amber-50 rounded-2xl border border-amber-200 p-5 shadow-sm">
-            <p class="text-xs text-amber-600 uppercase tracking-wide mb-1 font-semibold">⚠ รอยืนยัน</p>
-            <p id="tr-total-pending" class="text-2xl font-bold text-amber-600">—</p>
-            <p class="text-xs text-amber-500 mt-1">บาท (พบฝั่งเดียว)</p>
-          </div>
-          <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-            <p class="text-xs text-gray-500 font-semibold mb-3">สัดส่วนรายการภายใน</p>
-            <canvas id="chart-transfers"></canvas>
-            <div id="tr-legend" class="mt-3 space-y-1 text-xs text-gray-500"></div>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- end tab-transfers -->
-
+    </div>
   </main>
 
-  <!-- ===== LINK MODAL: เชื่อมโยงรายการ → Maintain + สมุดรายชื่อ ===== -->
   <div id="link-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeLinkModal()"></div>
     <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -287,20 +215,19 @@
     </div>
   </div>
 
-  <!-- ===== AUTO SYNC MODAL ===== -->
   <div id="auto-sync-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeAutoSyncModal()"></div>
     <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col">
       <div class="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl">
         <div>
           <h2 class="text-lg font-bold text-gray-800">⚡ Auto Sync</h2>
-          <p class="text-xs text-gray-400 mt-0.5">จับคู่ธุรกรรมกับสมุดรายชื่อ (Fuzzy Match)</p>
+          <p class="text-xs text-gray-400 mt-0.5">จับคู่ธุรกรรมกับสมุดรายชื่อแบบอัตโนมัติ</p>
         </div>
         <button onclick="closeAutoSyncModal()" class="text-gray-400 hover:text-gray-700 text-xl font-bold leading-none">✕</button>
       </div>
       <div class="overflow-y-auto flex-1 px-6 py-5" id="auto-sync-content"></div>
       <div class="bg-white border-t border-gray-100 px-6 py-4 flex items-center justify-between gap-3 rounded-b-2xl">
-        <span class="text-xs text-gray-400">เลือกรายการที่ต้องการบันทึก แล้วกด "บันทึกที่เลือก"</span>
+        <span class="text-xs text-gray-400">เลือกรายการที่ต้องการบันทึก แล้วกด “บันทึกที่เลือก”</span>
         <div class="flex gap-3">
           <button onclick="closeAutoSyncModal()"
             class="px-5 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
@@ -319,161 +246,12 @@
   <script src="js/mappings.js"></script>
   <script src="js/dashboard.js"></script>
   <script>
-    // ---- Transfer Tab: Auto-detect from allTransactions ----
-    let transferChart = null
-
-    function renderTransferTab() {
-      if (!allTransactions.length) {
-        document.getElementById('transfer-tbody').innerHTML =
-          '<tr><td colspan="5" class="text-center py-10 text-gray-400">ยังไม่มีข้อมูล — กรุณา Upload Statement ก่อน</td></tr>'
-        return
-      }
-
-      const { transfers, outToDir, inFromDir, dividends, salaries } = detectInternalTx(allTransactions)
-
-      // ---- Type config ----
-      const TYPE_CFG = {
-        'โอนระหว่างบัญชี':   { color: 'bg-purple-100 text-purple-700', dot: '#7c3aed' },
-        'โอนออกให้กรรมการ':  { color: 'bg-pink-100 text-pink-700',     dot: '#ec4899' },
-        'โอนเข้าจากกรรมการ': { color: 'bg-sky-100 text-sky-700',       dot: '#0ea5e9' },
-        'ปันผลกรรมการ':      { color: 'bg-amber-100 text-amber-700',   dot: '#f59e0b' },
-        [INTERNAL_TYPE_SALARY]: { color: 'bg-emerald-100 text-emerald-700', dot: '#10b981' },
-        'อื่นๆ':             { color: 'bg-gray-100 text-gray-500',     dot: '#94a3b8' },
-      }
-
-      // ---- Build combined rows ----
-      const allRows = [
-        ...transfers.map(r => ({ ...r, type: 'โอนระหว่างบัญชี' })),
-        ...salaries.map(({ t, person }) => ({
-          date: t.date, type: INTERNAL_TYPE_SALARY,
-          direction: `${displayInternalAccount(t.account)} → ${person}`,
-          amount: Math.abs(t.amount), status: 'confirmed', txId: String(t.id),
-        })),
-        ...outToDir.map(({ t, person }) => ({
-          date: t.date, type: INTERNAL_TYPES.has(t.category) ? t.category : 'โอนออกให้กรรมการ',
-          direction: `${displayInternalAccount(t.account)} → ${person}`,
-          amount: Math.abs(t.amount), status: 'confirmed', txId: String(t.id),
-        })),
-        ...inFromDir.map(({ t, person }) => ({
-          date: t.date, type: INTERNAL_TYPES.has(t.category) ? t.category : 'โอนเข้าจากกรรมการ',
-          direction: `${person} → ${displayInternalAccount(t.account)}`,
-          amount: Math.abs(t.amount), status: 'confirmed', txId: String(t.id),
-        })),
-        ...dividends.map(({ t, person }) => ({
-          date: t.date, type: INTERNAL_TYPES.has(t.category) ? t.category : 'ปันผลกรรมการ',
-          direction: `${displayInternalAccount(t.account)} → ${person}`,
-          amount: Math.abs(t.amount), status: 'confirmed', txId: String(t.id),
-        })),
-      ].sort((a, b) => b.date.localeCompare(a.date))
-
-      // ---- Render table ----
-      const tbody = document.getElementById('transfer-tbody')
-      if (!allRows.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-gray-400">ไม่พบรายการภายในที่ตรงเงื่อนไข</td></tr>'
-      } else {
-        tbody.innerHTML = allRows.map(r => {
-          const cfg       = TYPE_CFG[r.type] || { color: 'bg-gray-100 text-gray-600' }
-          const typeBadge = `<span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${cfg.color}">${r.type}</span>`
-          const editBtn   = r.txId
-            ? `<button onclick="openTypeSelect(this.closest('td'),'${r.txId}','${r.type}')"
-                class="ml-1.5 text-gray-300 hover:text-indigo-500 text-[11px] align-middle transition-colors" title="แก้ไขประเภท">✎</button>`
-            : ''
-          const isLarge  = r.amount >= 1000000
-          const amtFmt   = Number(r.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })
-          const statusBadge = r.status === 'confirmed'
-            ? `<span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">✓ ยืนยัน</span>`
-            : `<span class="inline-flex px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-600 border border-amber-300">⚠ รอยืนยัน</span>`
-          return `<tr class="border-t border-gray-100 hover:bg-gray-50 transition-colors">
-            <td class="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">${formatDate(r.date)}</td>
-            <td class="px-4 py-3 whitespace-nowrap">${typeBadge}${editBtn}</td>
-            <td class="px-4 py-3 text-sm text-gray-700">${r.direction}</td>
-            <td class="px-4 py-3 text-sm text-right font-semibold text-gray-800 whitespace-nowrap ${isLarge ? 'text-base' : ''}">${amtFmt}</td>
-            <td class="px-4 py-3 text-center">${statusBadge}</td>
-          </tr>`
-        }).join('')
-      }
-
-      // ---- Summary cards ----
-      const totalTransfer     = transfers.reduce((s, r) => s + r.amount, 0)
-      const confirmedTransfer = transfers.filter(r => r.status === 'confirmed').reduce((s, r) => s + r.amount, 0)
-      const pendingTransfer   = transfers.filter(r => r.status === 'pending').reduce((s, r) => s + r.amount, 0)
-      const totalSalary       = salaries.reduce((s, { t }) => s + Math.abs(t.amount), 0)
-      const totalOut          = outToDir.reduce((s, { t }) => s + Math.abs(t.amount), 0) + totalSalary
-      const totalIn           = inFromDir.reduce((s, { t }) => s + Math.abs(t.amount), 0)
-      const totalDividend     = dividends.reduce((s, { t }) => s + Math.abs(t.amount), 0)
-
-      const fmt = v => Number(v).toLocaleString('th-TH', { minimumFractionDigits: 2 })
-      document.getElementById('tr-total-pair-to-main').textContent = fmt(totalTransfer)
-      document.getElementById('tr-total-main-to-pair').textContent = fmt(totalOut)
-      document.getElementById('tr-total-pending').textContent      = fmt(pendingTransfer)
-
-      // ---- Pie chart (ใช้ยอดรวมทั้งหมด ไม่แยก confirmed/pending) ----
-      const chartData = [
-        { label: 'โอนระหว่างบัญชี',   value: totalTransfer,  color: '#7c3aed' },
-        { label: 'โอนออกให้กรรมการ',  value: totalOut,       color: '#ec4899' },
-        { label: 'โอนเข้าจากกรรมการ', value: totalIn,        color: '#0ea5e9' },
-        { label: 'ปันผลกรรมการ',      value: totalDividend,  color: '#f59e0b' },
-      ].filter(d => d.value > 0)
-
-      const total = chartData.reduce((s, d) => s + d.value, 0)
-      if (transferChart) transferChart.destroy()
-      transferChart = new Chart(document.getElementById('chart-transfers').getContext('2d'), {
-        type: 'doughnut',
-        data: {
-          labels:   chartData.map(d => d.label),
-          datasets: [{ data: chartData.map(d => d.value), backgroundColor: chartData.map(d => d.color), borderWidth: 2, borderColor: '#fff' }]
-        },
-        options: {
-          responsive: true, cutout: '65%',
-          plugins: {
-            legend: { display: false },
-            tooltip: { callbacks: { label: c => ` ${fmt(c.raw)} บาท (${total ? Math.round(c.raw / total * 100) : 0}%)` } }
-          }
-        }
-      })
-      document.getElementById('tr-legend').innerHTML = chartData.map(d => {
-        const pct = total ? Math.round(d.value / total * 100) : 0
-        return `<div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full flex-shrink-0" style="background:${d.color}"></span><span>${d.label}</span><span class="ml-auto font-semibold">${pct}%</span></div>`
-      }).join('')
-    }
-
-    // ---- Tab switching ----
-    const TABS = { overview: 'tab-overview', transfers: 'tab-transfers' }
-
-    function switchTab(name) {
-      Object.entries(TABS).forEach(([key, panelId]) => {
-        const panel = document.getElementById(panelId)
-        const btn   = document.querySelector(`[data-tab="${key}"]`)
-        if (key === name) {
-          panel.classList.remove('hidden')
-          btn.classList.add('border-yellow-400', 'text-yellow-600', 'bg-white')
-          btn.classList.remove('border-transparent', 'text-gray-500')
-        } else {
-          panel.classList.add('hidden')
-          btn.classList.remove('border-yellow-400', 'text-yellow-600', 'bg-white')
-          btn.classList.add('border-transparent', 'text-gray-500')
-        }
-      })
-      if (name === 'transfers') renderTransferTab()
-    }
-
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (btn.dataset.tab === 'transfers') {
-          window.location.href = 'internal-transfers.html'
-          return
-        }
-        switchTab(btn.dataset.tab)
-      })
-    })
-
-    // ---- Init ----
     document.addEventListener('DOMContentLoaded', async () => {
       await initDashboard()
       if (allTransactions.length) {
         const dates = allTransactions.map(t => t.date).filter(Boolean).sort()
-        const from  = formatDate(dates[0])
-        const to    = formatDate(dates[dates.length - 1])
+        const from = formatDate(dates[0])
+        const to = formatDate(dates[dates.length - 1])
         document.getElementById('data-range').textContent = `ข้อมูล ${from} — ${to}`
         document.getElementById('tx-count').textContent = `แสดง ${Math.min(allTransactions.length, 500)} จาก ${allTransactions.length} รายการ`
       } else {
