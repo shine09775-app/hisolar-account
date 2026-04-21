@@ -1,0 +1,179 @@
+﻿@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --hs-ink: #102b4d;
+  --hs-ink-strong: #0d223a;
+  --hs-ink-soft: #50647b;
+  --hs-surface: #ffffff;
+  --hs-surface-soft: #f7f9fc;
+  --hs-page: #eef3f8;
+  --hs-border: #dbe5ef;
+  --hs-border-strong: #bcccdc;
+  --hs-accent: #f7b500;
+  --hs-accent-d: #d89a00;
+  --hs-accent-soft: #fff4cf;
+  --hs-success: #2ea76a;
+  --hs-success-soft: #e4f6eb;
+  --hs-primary: #143a63;
+  --hs-primary-d: #0f2946;
+  --hs-primary-l: #e9f0f8;
+  --hs-blue: #4a79ac;
+  --hs-blue-l: #e7f0fb;
+  --hs-red: #d45e58;
+  --hs-red-l: #fbe4e0;
+  --hs-shadow: 0 18px 40px rgba(10, 35, 66, 0.08);
+  --hs-shadow-soft: 0 10px 24px rgba(10, 35, 66, 0.08);
+}
+
+* {
+  font-family: 'Kanit', system-ui, -apple-system, Segoe UI, sans-serif;
+}
+
+body,
+body.bg-gray-50,
+body.hs-dashboard-theme {
+  background:
+    radial-gradient(circle at top left, rgba(247, 181, 0, 0.1), transparent 28%),
+    linear-gradient(180deg, #edf3f8 0, #f8fafc 180px, #eef3f8 100%) !important;
+  color: var(--hs-ink);
+}
+
+body > nav,
+.hs-navbar {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0)),
+    linear-gradient(180deg, #21354b 0, #18293d 100%) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 14px 30px rgba(9, 25, 45, 0.18);
+  padding-top: 0.9rem !important;
+  padding-bottom: 1rem !important;
+}
+
+body > nav > span,
+.hs-navbar > span,
+.hs-navbar .brand-mark {
+  color: var(--hs-accent) !important;
+  font-weight: 700;
+}
+
+body > nav a,
+.hs-navbar .nav-link {
+  color: rgba(255, 255, 255, 0.76) !important;
+  border-color: transparent !important;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+body > nav a:hover,
+.hs-navbar .nav-link:hover {
+  color: #ffffff !important;
+}
+
+body > nav a.text-yellow-600,
+body > nav a.font-semibold,
+.hs-navbar .nav-link.is-active,
+.hs-navbar .nav-link.text-yellow-600 {
+  color: var(--hs-accent) !important;
+  border-bottom-color: var(--hs-accent) !important;
+}
+
+main .bg-white.rounded-2xl,
+main .bg-white.rounded-xl,
+main .bg-white.rounded-lg {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(219, 229, 239, 0.92) !important;
+  box-shadow: var(--hs-shadow-soft) !important;
+}
+
+.tab-btn {
+  color: var(--hs-ink-soft) !important;
+  border-color: transparent !important;
+  border-top-left-radius: 0.9rem;
+  border-top-right-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.tab-btn.text-yellow-600,
+.tab-btn.border-yellow-400,
+.tab-btn.bg-white {
+  color: var(--hs-primary) !important;
+  border-bottom-color: var(--hs-accent) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+}
+
+button.bg-yellow-400,
+a.bg-yellow-400 {
+  background: linear-gradient(180deg, #ffc21a 0, var(--hs-accent) 100%) !important;
+  border-color: var(--hs-accent) !important;
+  color: var(--hs-ink-strong) !important;
+  font-weight: 700;
+  box-shadow: 0 10px 20px rgba(247, 181, 0, 0.24);
+}
+
+button.bg-yellow-400:hover,
+a.bg-yellow-400:hover,
+button.hover\:bg-yellow-500:hover,
+a.hover\:bg-yellow-500:hover {
+  background: linear-gradient(180deg, #ffca30 0, var(--hs-accent-d) 100%) !important;
+  border-color: var(--hs-accent-d) !important;
+}
+
+.text-yellow-600 {
+  color: var(--hs-accent-d) !important;
+}
+
+.border-yellow-400 {
+  border-color: var(--hs-accent) !important;
+}
+
+input,
+select,
+textarea,
+.form-control,
+.form-select {
+  border-color: var(--hs-border) !important;
+  border-radius: 0.7rem;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.form-control:focus,
+.form-select:focus {
+  border-color: rgba(20, 58, 99, 0.55) !important;
+  box-shadow: 0 0 0 0.2rem rgba(20, 58, 99, 0.14) !important;
+  outline: none;
+}
+
+thead.bg-gray-50,
+.bg-gray-50 {
+  background-color: var(--hs-surface-soft) !important;
+}
+
+.text-gray-800,
+.text-gray-700 {
+  color: var(--hs-ink) !important;
+}
+
+.text-gray-500,
+.text-gray-400 {
+  color: var(--hs-ink-soft) !important;
+}
+
+.border-gray-200,
+.border-gray-100,
+.border-gray-300 {
+  border-color: var(--hs-border) !important;
+}
+
+@media (max-width: 1024px) {
+  body > nav,
+  .hs-navbar {
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem !important;
+  }
+
+  body > nav a,
+  .hs-navbar .nav-link {
+    padding-bottom: 0.2rem;
+  }
+}
