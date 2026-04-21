@@ -37,6 +37,14 @@
       </div>
     </div>
 
+    <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+      <p class="text-xs text-gray-500 font-semibold mb-3">Waterfall กระแสเงินเข้า/ออกบัญชีบริษัทและบัญชีคู่</p>
+      <div class="h-[360px] lg:h-[420px]">
+        <canvas id="chart-transfers" class="w-full h-full"></canvas>
+      </div>
+      <div id="tr-legend" class="mt-3 space-y-1 text-xs text-gray-500"></div>
+    </div>
+
     <div class="bg-white rounded-2xl border border-gray-200 p-5 text-sm text-gray-600 shadow-sm leading-7">
       <div>หน้านี้แสดงเฉพาะธุรกรรมภายในของ 3 กลุ่มบัญชีจากเมนู <a href="contacts.html" class="text-yellow-600 hover:underline">สมุดรายชื่อ</a> แท็บ <span class="font-semibold">🏦 บัญชีภายใน</span></div>
       <div class="mt-2">บัญชีบริษัท = บัญชีหลักของบริษัท</div>
@@ -84,11 +92,6 @@
           <p class="text-xs text-amber-600 uppercase tracking-wide mb-1 font-semibold">⚠ รอยืนยัน</p>
           <p id="tr-total-pending" class="text-2xl font-bold text-amber-600">—</p>
           <p class="text-xs text-amber-500 mt-1">บาท (พบเฉพาะฝั่งเดียว)</p>
-        </div>
-        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-          <p class="text-xs text-gray-500 font-semibold mb-3">สัดส่วนรายการภายใน</p>
-          <canvas id="chart-transfers"></canvas>
-          <div id="tr-legend" class="mt-3 space-y-1 text-xs text-gray-500"></div>
         </div>
       </div>
     </div>

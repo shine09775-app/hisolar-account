@@ -113,6 +113,29 @@ function getContactInfo(t) {
   return null
 }
 
+function getResolvedInternalInfoContact(info, t = null) {
+  if (!info || info.type !== 'internal') return null
+
+  const byName = findInternalSource(info.name)
+  if (isRecognizedInternalContact(byName)) return byName
+
+  if (t) {
+    const sourceInternal = findInternalSource(t.account)
+    if (
+      isRecognizedInternalContact(sourceInternal) &&
+      normalizeContactName(sourceInternal?.name) === normalizeContactName(info.name)
+    ) {
+      return sourceInternal
+    }
+  }
+
+  return null
+}
+
+function hasRecognizedInternalInfo(info, t = null) {
+  return !!getResolvedInternalInfoContact(info, t)
+}
+
 // ---- Load VAT flags from transaction_vat table ----
 async function loadVatFlags() {
   const { data } = await db.from('transaction_vat').select('transaction_id')
@@ -143,20 +166,27 @@ async function selectMaintainRows(table, baseColumns, optionalColumns = []) {
 
 async function upsertMaintainRecord(table, payload, existingId = null) {
   let nextPayload = { ...payload }
-  let result = existingId
-    ? await db.from(table).update(nextPayload).eq('id', existingId)
-    : await db.from(table).insert(nextPayload)
 
-  if (!result.error) return
+  const doQuery = (id) => id
+    ? db.from(table).update(nextPayload).eq('id', id).select()
+    : db.from(table).insert(nextPayload).select()
 
-  if (Object.prototype.hasOwnProperty.call(nextPayload, 'transaction_id') && isMissingColumnError(result.error, 'transaction_id')) {
+  let result = await doQuery(existingId)
+
+  if (result.error && Object.prototype.hasOwnProperty.call(nextPayload, 'transaction_id') && isMissingColumnError(result.error, 'transaction_id')) {
     delete nextPayload.transaction_id
-    result = existingId
-      ? await db.from(table).update(nextPayload).eq('id', existingId)
-      : await db.from(table).insert(nextPayload)
+    result = await doQuery(existingId)
   }
 
   if (result.error) throw result.error
+
+  if (!result.data || result.data.length === 0) {
+    throw new Error(
+      existingId
+        ? `ไม่สามารถอัปเดตตาราง ${table} ได้ — ตรวจสอบ Supabase RLS Policy (UPDATE permission)`
+        : `ไม่สามารถบันทึกลงตาราง ${table} ได้ — ตรวจสอบ Supabase RLS Policy (INSERT permission)`
+    )
+  }
 }
 
 // ---- Load maintain records & build lookup maps ----
@@ -469,7 +499,7 @@ function renderExpenseGroupChart(rows) {
   for (const t of rows.filter(t => t.amount < 0)) {
     if (excludedIds.has(String(t.id)) || dividendIds.has(String(t.id))) continue
     const info = getContactInfo(t)
-    if (info?.type === 'internal') continue
+    if (hasRecognizedInternalInfo(info, t)) continue
     const grp = (info && info.type === 'supplier') ? info.name : resolveCategory(t.memo)
     groups[grp] = (groups[grp] || 0) + Math.abs(t.amount)
   }
@@ -508,7 +538,7 @@ function renderIncomeCustomerChart(rows) {
   for (const t of rows.filter(t => t.amount > 0)) {
     if (excludedIds.has(String(t.id)) || dividendIds.has(String(t.id))) continue
     const info = getContactInfo(t)
-    if (info?.type === 'internal') continue
+    if (hasRecognizedInternalInfo(info, t)) continue
     const name = info ? info.name : extractCounterparty(t.memo)
     if (name && name !== '—') customers[name] = (customers[name] || 0) + t.amount
   }
@@ -551,6 +581,7 @@ function renderTable(rows) {
 
   tbody.innerHTML = rows.slice(0, 500).map(t => {
     const info         = getContactInfo(t)
+    const isRecognizedInternal = hasRecognizedInternalInfo(info, t)
     const counterparty = info ? info.name : extractCounterparty(t.memo)
     const internalType = normalizeInternalType(t.category)
     const savedInternalType = INTERNAL_TYPES.has(internalType) ? internalType : ''
@@ -558,7 +589,7 @@ function renderTable(rows) {
     const syncTitle    = syncResult?.reason
       ? `${Math.round((syncResult.score || 0) * 100)}% — ${esc(syncResult.reason)}`
       : `${Math.round((syncResult?.score || 0) * 100)}% match`
-    const badge = info?.type === 'internal'
+    const badge = isRecognizedInternal
       ? `<span class="ml-1.5 text-[10px] bg-slate-100 text-slate-500 rounded px-1 py-0.5 font-medium align-middle">ภายใน</span>`
       : info?.source === 'maintain'
         ? `<span class="ml-1.5 text-[10px] bg-indigo-100 text-indigo-500 rounded px-1 py-0.5 font-medium align-middle">M</span>`
@@ -600,7 +631,7 @@ function renderTable(rows) {
     const canVat       = t.amount < 0 || (t.amount > 0 && isCompanyAcc)
     const isVat        = vatSet.has(String(t.id))
     let vatCell
-    if (info?.type === 'internal') {
+    if (isRecognizedInternal) {
       vatCell = `<span class="text-gray-200 text-xs">—</span>`
     } else if (canVat) {
       const label = t.amount > 0 ? 'ภาษีขาย' : 'ภาษีซื้อ'
@@ -2001,6 +2032,7 @@ async function saveSyncSelections() {
       return
     }
     let saved = 0, errors = 0
+    const errorDetails = []
     for (const { t, contact } of toSave) {
       try {
         await saveAutoSyncMatch(t, contact.name, contact.type)
@@ -2008,6 +2040,7 @@ async function saveSyncSelections() {
       } catch (e) {
         console.error('Auto sync save error:', e)
         errors++
+        errorDetails.push(`- ${formatDate(t.date)} | ${formatBaht(Math.abs(t.amount))} | ${String(e.message || e)}`)
       }
     }
     syncResults = new Map()
@@ -2015,6 +2048,14 @@ async function saveSyncSelections() {
     autoSyncReviewItems = []
     await reloadDashboardView(activeFilters)
     closeAutoSyncModal()
+    if (errorDetails.length) {
+      alert([
+        `Auto Sync บันทึกสำเร็จ ${saved} รายการ`,
+        `บันทึกไม่สำเร็จ ${errors} รายการ`,
+        '',
+        ...errorDetails.slice(0, 10),
+      ].join('\n'))
+    }
     showSyncToast(
       errors ? `บันทึก ${saved} รายการ (ข้อผิดพลาด ${errors})` : `✅ บันทึกสำเร็จ ${saved} รายการ`,
       errors ? 'red' : 'green'
@@ -2041,8 +2082,15 @@ async function saveAutoSyncMatch(t, contactName, contactType = '') {
     : (INTERNAL_TYPES.has(normalizeInternalType(t.category)) ? null : undefined)
 
   if (nextCategory !== undefined) {
-    const { error } = await db.from('transactions').update({ category: nextCategory }).eq('id', t.id)
-    if (error) throw error
+    const result = await db.from('transactions')
+      .update({ category: nextCategory })
+      .eq('id', t.id)
+      .select('id, category')
+
+    if (result.error) throw result.error
+    if (!result.data || result.data.length === 0) {
+      throw new Error('ไม่สามารถอัปเดต transactions.category ได้ — ตรวจสอบ Supabase RLS Policy (UPDATE permission)')
+    }
     const tx = allTransactions.find(row => String(row.id) === String(t.id))
     if (tx) tx.category = nextCategory
   }
@@ -2577,5 +2625,3 @@ function showSyncToast(msg, type = 'info') {
   setTimeout(() => { el.style.transition = 'opacity 0.3s'; el.style.opacity = '0' }, 2700)
   setTimeout(() => el.remove(), 3000)
 }
-
-

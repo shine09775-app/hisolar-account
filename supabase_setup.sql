@@ -37,6 +37,31 @@ alter table expense_records enable row level security;
 create policy "allow_all_income"   on income_records  for all using (true) with check (true);
 create policy "allow_all_expense"  on expense_records for all using (true) with check (true);
 
+-- 3a. ตาราง transactions — หน้า Dashboard และ Auto Sync ต้องอ่าน/แก้ category ได้
+alter table if exists transactions enable row level security;
+
+drop policy if exists "allow_all_transactions_select" on transactions;
+drop policy if exists "allow_all_transactions_insert" on transactions;
+drop policy if exists "allow_all_transactions_update" on transactions;
+drop policy if exists "allow_all_transactions_delete" on transactions;
+
+create policy "allow_all_transactions_select"
+  on transactions for select
+  using (true);
+
+create policy "allow_all_transactions_insert"
+  on transactions for insert
+  with check (true);
+
+create policy "allow_all_transactions_update"
+  on transactions for update
+  using (true)
+  with check (true);
+
+create policy "allow_all_transactions_delete"
+  on transactions for delete
+  using (true);
+
 -- 3b. ตาราง contacts (สมุดรายชื่อ — ลูกค้าและผู้จำหน่าย)
 create table if not exists contacts (
   id             uuid default gen_random_uuid() primary key,
