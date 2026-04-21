@@ -36,16 +36,24 @@ logic ของ Auto Sync อยู่ในไฟล์นี้ทั้งห
 - `tokenOverlapScore(text, name)`
 - `fuzzyScore(text, name)`
 - `compareAutoSyncText(text, name)`
+- `scoreDirectorSalaryPattern(t, contact)`
 
 ### Match selection
 
 - `bestExternalContactMatch(t)`
-- `bestInternalDirectorMatch(t)`
+- `bestInternalContactMatch(t)`
 - `bestContactMatch(t)`
+- `getHeuristicAutoSyncMatch(t)`
 
 `bestContactMatch()` เป็นจุดรวมสุดท้าย
 
-## เกณฑ์การ match ปัจจุบัน
+## กลุ่มที่ Auto Sync ต้องมีผล
+
+Auto Sync ต้องครอบคลุมทั้ง 3 กลุ่มจากสมุดรายชื่อ:
+
+- `customer`
+- `supplier`
+- `internal`
 
 ### External
 
@@ -54,21 +62,23 @@ logic ของ Auto Sync อยู่ในไฟล์นี้ทั้งห
 - รายรับ → `customer`
 - รายจ่าย → `supplier`
 
-### Internal director
+### Internal
 
-ใช้กับ `internal` เฉพาะ contact ที่ resolve role ได้เป็น `director`
+ใช้กับ `internal` เฉพาะ contact ที่ resolve role ได้จริงเป็นหนึ่งใน 3 กลุ่ม:
 
-รองรับกรณี:
+- `company`
+- `joint`
+- `director`
 
-- `โอนไป SCB X0185 นาย วสันต์ ปานแย++`
-- `โอนไป BAY X1347 นาย วสันต์ ปานแย++`
-- `จาก BAY X1347 WASAN PANY++`
-- `จาก BAY X4582 APAPORN THE++`
+ถ้า contact อยู่แท็บ `บัญชีภายใน` แต่ resolve role ไม่ได้ จะไม่ถูกใช้ใน Auto Sync ฝั่ง internal
 
-โดยใช้ข้อมูลร่วมกันดังนี้:
+## หลักการ match ปัจจุบัน
+
+รองรับการดูข้อมูลร่วมกันดังนี้:
 
 - `X####`
-- prefix ธนาคารใน memo เช่น `BAY`, `KTB`, `SCB`, `BBL`, `KK`, `KKP`
+- `account_number`
+- prefix ธนาคารใน memo เช่น `BAY`, `KTB`, `SCB`, `BBL`, `KK`, `KKP`, `KBANK`
 - ชื่อไทยแบบเต็ม
 - ชื่อไทยแบบถูกตัดท้าย
 - alias อังกฤษของกรรมการ
@@ -76,7 +86,7 @@ logic ของ Auto Sync อยู่ในไฟล์นี้ทั้งห
 
 ## Director profile
 
-profile ของกรรมการเก็บในตัวแปร:
+profile ของกรรมการเก็บใน:
 
 - `DIRECTOR_PROFILES`
 
@@ -116,14 +126,44 @@ profile ของกรรมการเก็บในตัวแปร:
 - `68% - 87%` = review
 - `< 68%` = unmatched
 
+## Save behavior
+
+### Persisted match
+
+Auto Sync จะข้ามเฉพาะรายการที่ถูกบันทึกจริงใน `maintain records` แล้ว
+
+### Heuristic match
+
+ถ้ารายการมองเห็นได้จาก memo/contact parsing แต่ยังไม่ถูก persist ระบบยังต้องเอามา save ได้
+
+### Internal categorization
+
+ถ้า match เป็น `internal` แล้ว ตอน save ต้องอัปเดต `transactions.category` ด้วย โดยใช้:
+
+- `inferInternalCategory()`
+
+## Salary rules
+
+- Fixed salary rule for directors:
+  - `น.ส. อาภาพร เทพจันทร์` = `15,000` บาท
+  - `นาย วสันต์ ปานแย้ม` = `15,000` บาท
+- Expected transfer window: day `1-3` of each month
+- เมื่อ Auto Sync match แถวนี้เป็น internal director แล้ว ต้อง persist `transactions.category = เงินเดือน`
+
+main code paths:
+
+- `scoreDirectorSalaryPattern()`
+- `isLikelySalaryInternalTx()`
+- `inferInternalCategory()`
+
 ## จุดที่ต้องแก้พร้อมกันถ้าปรับ logic
 
 1. Matcher
    - `bestExternalContactMatch()`
-   - `bestInternalDirectorMatch()`
+   - `bestInternalContactMatch()`
    - `bestContactMatch()`
 
-2. UI badge / modal
+2. UI modal
    - `renderAutoSyncModal()`
    - `renderSyncSection()`
 
@@ -136,10 +176,10 @@ profile ของกรรมการเก็บในตัวแปร:
 
 ## กฎสำคัญ
 
-- ห้ามให้ Auto Sync internal ไปจับ `internal` ที่ไม่ใช่กรรมการ
+- ห้ามให้ Auto Sync internal ไปจับ `internal` ที่ไม่เข้า 3 กลุ่ม `company / joint / director`
 - ถ้า internal กับ external ได้คะแนนใกล้กัน ให้เลือก internal ก็ต่อเมื่อคะแนนสูงกว่าชัดเจน
 - ถ้า memo มี bank hint และ contact มี bank hint ตรงกัน ให้ boost score ได้
-- ถ้า match เป็น `internal` แล้ว ตอน save ต้องอัปเดต `transactions.category` ด้วย
+- ถ้า save ลง Supabase ไม่สำเร็จ ต้องแจ้ง error ชัดว่า fail ที่ตารางใด
 
 ## Suggested workflow เวลาจะแก้รอบหน้า
 
@@ -156,17 +196,3 @@ profile ของกรรมการเก็บในตัวแปร:
 - `จาก BAY X1347 WASAN PANY++`
 - `จาก BAY X4582 APAPORN THE++`
 - `โอนไป KK X3006 นาย ชัยวัฒน์ เทพจั++`
-
-## Salary rules
-
-- Fixed salary rule for directors:
-  - `น.ส. อาภาพร เทพจันทร์` = `15,000` บาท
-  - `นาย วสันต์ ปานแย้ม` = `15,000` บาท
-- Expected transfer window: day `1-3` of each month
-- When Auto Sync matches these rows as internal director accounts, `saveAutoSyncMatch()` should persist `transactions.category = เงินเดือน`
-- Main code paths:
-  - `scoreDirectorSalaryPattern()`
-  - `isLikelySalaryInternalTx()`
-  - `inferInternalCategory()`
-- Auto Sync should skip only persisted matches from `maintain` records.
-  Heuristic rows that are visible from memo/contact parsing must still be saved by Auto Sync.

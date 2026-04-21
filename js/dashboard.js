@@ -363,14 +363,10 @@ function renderIncomeChart(rows) {
     if (!ym) continue
 
     const txId = String(t.id)
-    if (dividendIds.has(txId)) {
-      if (!monthly[ym]) monthly[ym] = { income: 0, expense: 0, dividend: 0 }
-      monthly[ym].dividend += Math.abs(t.amount)
-      continue
-    }
+    if (dividendIds.has(txId)) continue
     if (excludedIds.has(txId)) continue
 
-    if (!monthly[ym]) monthly[ym] = { income: 0, expense: 0, dividend: 0 }
+    if (!monthly[ym]) monthly[ym] = { income: 0, expense: 0 }
     if (t.amount > 0) monthly[ym].income += t.amount
     else monthly[ym].expense += Math.abs(t.amount)
   }
@@ -378,9 +374,6 @@ function renderIncomeChart(rows) {
   const labels     = Object.keys(monthly).sort()
   const income     = labels.map(l => monthly[l].income)
   const expense    = labels.map(l => monthly[l].expense)
-  const dividend   = labels.map(l => monthly[l].dividend)
-  let runningTotal = 0
-  const cumulativeDividend = dividend.map(v => (runningTotal += v))
 
   const ctx = document.getElementById('chart-monthly')?.getContext('2d')
   if (!ctx) return
@@ -392,18 +385,6 @@ function renderIncomeChart(rows) {
       datasets: [
         { type: 'bar', label: 'รายรับ', data: income, backgroundColor: '#22c55e', stack: 'income' },
         { type: 'bar', label: 'รายจ่าย', data: expense, backgroundColor: '#ef4444', stack: 'expense' },
-        { type: 'bar', label: 'ปันผลกรรมการ', data: dividend, backgroundColor: '#3b82f6', stack: 'expense' },
-        {
-          type: 'line',
-          label: 'เงินปันผลสะสม',
-          data: cumulativeDividend,
-          borderColor: '#1d4ed8',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          tension: 0.3,
-          pointRadius: 3,
-          pointBackgroundColor: '#1d4ed8',
-        },
       ],
     },
     options: {
@@ -1758,14 +1739,15 @@ function getEligibleInternalAutoSyncContacts(t) {
   const sourceRole = resolveInternalRole(sourceInternal)
   if (!sourceRole) return []
 
-  // Auto Sync internal should focus on director accounts referenced from internal statements.
+  const sourceName = normalizeContactName(sourceInternal?.name)
   return allContacts.filter(contact =>
     contact.type === 'internal' &&
-    resolveInternalRole(contact) === 'director'
+    !!resolveInternalRole(contact) &&
+    normalizeContactName(contact.name) !== sourceName
   )
 }
 
-function bestInternalDirectorMatch(t) {
+function bestInternalContactMatch(t) {
   if (!t?.memo || !allContacts.length) return null
 
   const contacts = getEligibleInternalAutoSyncContacts(t)
@@ -1804,12 +1786,12 @@ function bestInternalDirectorMatch(t) {
   }
 
   return (best && bestScore >= AUTO_SYNC_REVIEW_THRESHOLD)
-    ? { contact: best, score: Math.min(bestScore, 1), reason: bestReason || 'บัญชีกรรมการใกล้เคียง' }
+    ? { contact: best, score: Math.min(bestScore, 1), reason: bestReason || 'บัญชีภายในใกล้เคียง' }
     : null
 }
 
 function bestContactMatch(t) {
-  const internalMatch = bestInternalDirectorMatch(t)
+  const internalMatch = bestInternalContactMatch(t)
   const externalMatch = bestExternalContactMatch(t)
 
   if (internalMatch && externalMatch) {
@@ -1826,10 +1808,12 @@ function getPersistedMatchInfo(t) {
 function getHeuristicAutoSyncMatch(t) {
   const info = getContactInfo(t)
   if (!info || info.source !== 'contact' || !info.name) return null
+  const isRecognizedInternal = hasRecognizedInternalInfo(info, t)
+  if (info.type === 'internal' && !isRecognizedInternal) return null
   return {
-    contact: { name: info.name, type: info.type || '' },
-    score: info.type === 'internal' ? 0.99 : 0.95,
-    reason: info.type === 'internal'
+    contact: { name: info.name, type: isRecognizedInternal ? 'internal' : (info.type || '') },
+    score: isRecognizedInternal ? 0.99 : 0.95,
+    reason: isRecognizedInternal
       ? 'ตรงบัญชีภายในจาก memo'
       : 'ตรงข้อมูลสมุดรายชื่อจาก memo',
   }
@@ -1844,7 +1828,7 @@ async function runAutoSync() {
     const matchableContacts = allContacts.filter(c =>
       c.type === 'customer' ||
       c.type === 'supplier' ||
-      (c.type === 'internal' && resolveInternalRole(c) === 'director')
+      (c.type === 'internal' && !!resolveInternalRole(c))
     )
     if (!matchableContacts.length) {
       showSyncToast('ไม่พบรายชื่อที่ใช้ Auto Sync ในสมุดรายชื่อ — กรุณาเพิ่มรายชื่อก่อน', 'info')
@@ -2340,7 +2324,16 @@ function findInternalSource(raw) {
 }
 
 function findInternalCounterparty(text, excludeName = '') {
-  return findBestInternalContact(text, excludeName)
+  const matched = findBestInternalContact(text, excludeName)
+  if (matched) return matched
+
+  const synthetic = findMappedSharedInternal(text)
+  if (!synthetic) return null
+
+  const excluded = normInternalText(excludeName)
+  if (excluded && normInternalText(synthetic.name) === excluded) return null
+
+  return synthetic
 }
 
 function resolveInternalRole(contact) {

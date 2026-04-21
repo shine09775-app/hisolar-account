@@ -73,11 +73,25 @@ function buildInternalFlowSnapshot(t, preferredName = '') {
   }
 }
 
-function resolveCoreSignedAmount(type, t, flow) {
+function resolveCoreSignedAmount(type, t, flow, zeroTransfer = true) {
+  const rawAmount = Number(t?.amount || 0)
   const absAmt = Math.abs(Number(t?.amount || 0))
   if (!absAmt) return 0
 
-  if (type === INTERNAL_TYPE_TRANSFER) return 0
+  if (type === INTERNAL_TYPE_TRANSFER) {
+    if (zeroTransfer) return 0
+
+    if (flow.fromRole === 'company' && flow.toRole === 'joint') return -absAmt
+    if (flow.fromRole === 'joint' && flow.toRole === 'company') return absAmt
+
+    // Fallback from the statement account perspective:
+    // company account keeps the original sign, joint account flips the sign
+    // so the summary always reads as movement from the company's viewpoint.
+    if (flow.sourceRole === 'company') return rawAmount
+    if (flow.sourceRole === 'joint') return -rawAmount
+
+    return rawAmount
+  }
   if (type === INTERNAL_TYPE_OUT || type === INTERNAL_TYPE_SALARY || type === INTERNAL_TYPE_DIVIDEND) return -absAmt
   if (type === INTERNAL_TYPE_IN) return absAmt
 
@@ -85,10 +99,16 @@ function resolveCoreSignedAmount(type, t, flow) {
   if (flow.fromRole === 'director' && isCompanyOrJointRole(flow.toRole)) return absAmt
   if (isCompanyOrJointRole(flow.fromRole) && flow.toRole === 'director') return -absAmt
 
+  // Fallback: if we only know the role of the statement account, keep the
+  // signed amount from the perspective of company/joint so summary cards move
+  // with manual type changes even when target role cannot be resolved.
+  if (isCompanyOrJointRole(flow.sourceRole)) return rawAmount
+  if (flow.sourceRole === 'director') return -rawAmount
+
   return 0
 }
 
-function buildTransferRow(t, fallbackType, preferredName = '', fallbackDirection = '') {
+function buildTransferRow(t, fallbackType, preferredName = '', fallbackDirection = '', options = {}) {
   const type = resolveTransferRowType(t?.category, fallbackType)
   const flow = buildInternalFlowSnapshot(t, preferredName)
   return {
@@ -96,7 +116,7 @@ function buildTransferRow(t, fallbackType, preferredName = '', fallbackDirection
     type,
     direction: flow.direction.includes('?') && fallbackDirection ? fallbackDirection : flow.direction,
     amount: Math.abs(Number(t.amount || 0)),
-    signedAmount: resolveCoreSignedAmount(type, t, flow),
+    signedAmount: resolveCoreSignedAmount(type, t, flow, options.zeroTransfer ?? true),
     status: 'confirmed',
     txId: String(t.id),
   }
@@ -158,6 +178,43 @@ function renderTransferLegend(points) {
   ].join('')
 }
 
+function renderTransferTypeSummary(summaryRows, typeCfg) {
+  const el = document.getElementById('tr-summary-grid')
+  if (!el) return
+
+  const fmt = value => Number(value).toLocaleString('th-TH', { minimumFractionDigits: 2 })
+  const fmtSigned = value => `${value >= 0 ? '+' : '-'}${fmt(Math.abs(value))}`
+
+  const cards = INTERNAL_TYPE_OPTIONS.map(type => {
+    const rows = summaryRows.filter(row => row.type === type)
+    const inflow = rows.reduce((sum, row) => sum + (row.signedAmount > 0 ? row.signedAmount : 0), 0)
+    const outflow = rows.reduce((sum, row) => sum + (row.signedAmount < 0 ? Math.abs(row.signedAmount) : 0), 0)
+    const net = inflow - outflow
+    const count = rows.length
+    const cfg = typeCfg[type] || typeCfg[INTERNAL_TYPE_OTHER]
+    const valueClass = net > 0
+      ? 'text-emerald-600'
+      : net < 0
+        ? 'text-rose-600'
+        : 'text-gray-500'
+
+    return `<div class="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+      <div class="flex items-center justify-between gap-2">
+        <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${cfg.color}">${type}</span>
+        <span class="text-[10px] text-gray-400">${count.toLocaleString('th-TH')} รายการ</span>
+      </div>
+      <div class="mt-2 text-2xl font-bold ${valueClass}">${fmtSigned(net)}</div>
+      <div class="mt-1 text-[11px] text-gray-400">สุทธิจากเงินเข้า/ออก บัญชีบริษัทหรือบัญชีคู่</div>
+      <div class="mt-2 flex items-center justify-between gap-3 text-[11px]">
+        <span class="text-emerald-600">เข้า +${fmt(inflow)}</span>
+        <span class="text-rose-600">ออก -${fmt(outflow)}</span>
+      </div>
+    </div>`
+  })
+
+  el.innerHTML = cards.join('')
+}
+
 function renderTransferTab() {
   const tbody = document.getElementById('transfer-tbody')
   if (!tbody) return
@@ -166,16 +223,22 @@ function renderTransferTab() {
 
   if (!allTransactions.length) {
     tbody.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-gray-400">ยังไม่มีข้อมูล กรุณา Upload Statement ก่อน</td></tr>'
-    setText('tr-total-company-joint', '0.00')
-    setText('tr-total-out-director', '0.00')
-    setText('tr-total-pending', '0.00')
     setTransferMeta('ยังไม่มีรายการภายใน')
     destroyTransferChart()
     renderTransferLegend([])
+    renderTransferTypeSummary([], {
+      [INTERNAL_TYPE_TRANSFER]: { color: 'bg-purple-100 text-purple-700' },
+      [INTERNAL_TYPE_OUT]: { color: 'bg-pink-100 text-pink-700' },
+      [INTERNAL_TYPE_IN]: { color: 'bg-sky-100 text-sky-700' },
+      [INTERNAL_TYPE_ADVANCE]: { color: 'bg-rose-100 text-rose-700' },
+      [INTERNAL_TYPE_DIVIDEND]: { color: 'bg-blue-100 text-blue-700' },
+      [INTERNAL_TYPE_SALARY]: { color: 'bg-emerald-100 text-emerald-700' },
+      [INTERNAL_TYPE_OTHER]: { color: 'bg-gray-100 text-gray-600' },
+    })
     return
   }
 
-  const { transfers, outToDir, inFromDir, advanceClears, dividends, salaries, others } = detectInternalTx(allTransactions)
+  const { transferItems, transfers, outToDir, inFromDir, advanceClears, dividends, salaries, others } = detectInternalTx(allTransactions)
 
   const TYPE_CFG = {
     [INTERNAL_TYPE_TRANSFER]: { color: 'bg-purple-100 text-purple-700' },
@@ -196,6 +259,16 @@ function renderTransferTab() {
     ...dividends.map(({ t, person }) => buildTransferRow(t, INTERNAL_TYPE_DIVIDEND, person)),
     ...others.map(({ t, direction }) => buildTransferRow(t, INTERNAL_TYPE_OTHER, '', direction)),
   ].sort((a, b) => b.date.localeCompare(a.date))
+
+  const summaryRows = [
+    ...transferItems.map(t => buildTransferRow(t, INTERNAL_TYPE_TRANSFER, '', '', { zeroTransfer: false })),
+    ...salaries.map(({ t, person }) => buildTransferRow(t, INTERNAL_TYPE_SALARY, person)),
+    ...outToDir.map(({ t, person }) => buildTransferRow(t, INTERNAL_TYPE_OUT, person)),
+    ...inFromDir.map(({ t, person }) => buildTransferRow(t, INTERNAL_TYPE_IN, person)),
+    ...advanceClears.map(({ t, person }) => buildTransferRow(t, INTERNAL_TYPE_ADVANCE, person)),
+    ...dividends.map(({ t, person }) => buildTransferRow(t, INTERNAL_TYPE_DIVIDEND, person)),
+    ...others.map(({ t, direction }) => buildTransferRow(t, INTERNAL_TYPE_OTHER, '', direction)),
+  ]
 
   if (!allRows.length) {
     tbody.innerHTML = '<tr><td colspan="5" class="text-center py-10 text-gray-400">ไม่พบรายการภายในที่ตรงเงื่อนไข</td></tr>'
@@ -221,17 +294,8 @@ function renderTransferTab() {
     }).join('')
   }
 
-  const totalTransfer = transfers.reduce((sum, row) => sum + row.amount, 0)
-  const pendingTransfer = transfers.filter(row => row.status === 'pending').reduce((sum, row) => sum + row.amount, 0)
-  const totalSalary = salaries.reduce((sum, { t }) => sum + Math.abs(Number(t.amount || 0)), 0)
-  const totalOut = outToDir.reduce((sum, { t }) => sum + Math.abs(Number(t.amount || 0)), 0)
-  const totalDividend = dividends.reduce((sum, { t }) => sum + Math.abs(Number(t.amount || 0)), 0)
-
-  const fmt = value => Number(value).toLocaleString('th-TH', { minimumFractionDigits: 2 })
-  setText('tr-total-company-joint', fmt(totalTransfer))
-  setText('tr-total-out-director', fmt(totalOut + totalSalary + totalDividend))
-  setText('tr-total-pending', fmt(pendingTransfer))
   setTransferMeta(`พบ ${allRows.length.toLocaleString('th-TH')} รายการภายใน`)
+  renderTransferTypeSummary(summaryRows, TYPE_CFG)
 
   const points = buildTransferWaterfallPoints(allRows)
   const chartEl = document.getElementById('chart-transfers')
