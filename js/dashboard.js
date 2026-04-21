@@ -363,10 +363,14 @@ function renderIncomeChart(rows) {
     if (!ym) continue
 
     const txId = String(t.id)
-    if (dividendIds.has(txId)) continue
+    if (!monthly[ym]) monthly[ym] = { income: 0, expense: 0, dividend: 0 }
+
+    if (dividendIds.has(txId)) {
+      monthly[ym].dividend += Math.abs(t.amount)
+      continue
+    }
     if (excludedIds.has(txId)) continue
 
-    if (!monthly[ym]) monthly[ym] = { income: 0, expense: 0 }
     if (t.amount > 0) monthly[ym].income += t.amount
     else monthly[ym].expense += Math.abs(t.amount)
   }
@@ -374,6 +378,7 @@ function renderIncomeChart(rows) {
   const labels     = Object.keys(monthly).sort()
   const income     = labels.map(l => monthly[l].income)
   const expense    = labels.map(l => monthly[l].expense)
+  const dividend   = labels.map(l => monthly[l].dividend)
 
   const ctx = document.getElementById('chart-monthly')?.getContext('2d')
   if (!ctx) return
@@ -385,6 +390,7 @@ function renderIncomeChart(rows) {
       datasets: [
         { type: 'bar', label: 'รายรับ', data: income, backgroundColor: '#22c55e', stack: 'income' },
         { type: 'bar', label: 'รายจ่าย', data: expense, backgroundColor: '#ef4444', stack: 'expense' },
+        { type: 'bar', label: 'เงินปันผล', data: dividend, backgroundColor: '#2563eb', stack: 'expense' },
       ],
     },
     options: {
