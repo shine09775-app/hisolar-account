@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>รายการ PO — Hi Solar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="css/index-theme.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<!-- ======== NAVBAR ======== -->
+<nav class="hs-navbar bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-6">
+  <span class="font-bold text-yellow-500 text-lg">☀ Hi Solar</span>
+  <a href="index.html"              class="nav-link text-sm text-gray-500 hover:text-gray-800">Dashboard</a>
+  <a href="internal-transfers.html" class="nav-link text-sm text-gray-500 hover:text-gray-800">โอนระหว่างบัญชี</a>
+  <a href="upload.html"             class="nav-link text-sm text-gray-500 hover:text-gray-800">Upload</a>
+  <a href="history.html"            class="nav-link text-sm text-gray-500 hover:text-gray-800">Upload Log</a>
+  <a href="maintain.html"           class="nav-link text-sm text-gray-500 hover:text-gray-800">ข้อมูลรายการ</a>
+  <a href="contacts.html"           class="nav-link text-sm text-gray-500 hover:text-gray-800">สมุดรายชื่อ</a>
+  <a href="po-list.html"            class="nav-link is-active text-sm text-yellow-600 font-semibold border-b-2 border-yellow-400 pb-1">รายการ PO</a>
+  <a href="po.html"                 class="nav-link text-sm text-gray-500 hover:text-gray-800">PO สั่งซื้อ</a>
+</nav>
+
+<main class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+
+  <!-- Page header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-800">รายการ PO</h1>
+      <p class="text-sm text-gray-400 mt-0.5">ประวัติใบสั่งซื้อและจัดการสินค้าประจำ Supplier</p>
+    </div>
+    <a href="po.html"
+      class="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors">
+      + สร้าง PO ใหม่
+    </a>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex gap-2 border-b border-gray-200">
+    <button id="tab-btn-pos" onclick="switchTab('pos')"
+      class="tab-btn px-5 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 border-yellow-400 text-yellow-600 bg-white transition-colors">
+      📋 ประวัติ PO
+    </button>
+    <button id="tab-btn-maintain" onclick="switchTab('maintain')"
+      class="tab-btn px-5 py-2.5 text-sm font-semibold rounded-t-lg border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors">
+      ⚙ Maintain สินค้า Supplier
+    </button>
+  </div>
+
+  <!-- ===== TAB: ประวัติ PO ===== -->
+  <div id="tab-pos">
+
+    <!-- Filter bar -->
+    <div class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
+      <div class="flex flex-wrap gap-3 items-end">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Supplier</label>
+          <select id="fl-supplier"
+            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 min-w-[180px]">
+            <option value="">ทั้งหมด</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">ตั้งแต่วันที่</label>
+          <input type="date" id="fl-from"
+            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">ถึงวันที่</label>
+          <input type="date" id="fl-to"
+            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">ค้นหา</label>
+          <input type="text" id="fl-search" placeholder="เลขที่ PO / Supplier / อ้างอิง..."
+            class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 w-52">
+        </div>
+        <button onclick="applyFilter()"
+          class="px-4 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white text-sm font-semibold rounded-lg transition-colors">
+          ค้นหา
+        </button>
+        <button onclick="resetFilter()"
+          class="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-lg transition-colors">
+          รีเซ็ต
+        </button>
+        <span id="po-count" class="ml-auto text-xs text-gray-400"></span>
+      </div>
+    </div>
+
+    <!-- PO Table -->
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">เลขที่ PO</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Supplier</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">วันที่สั่งซื้อ</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">วันที่ชำระ</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">อ้างอิง</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">ยอดรวม (฿)</th>
+              <th class="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase">รายการ</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="po-tbody">
+            <tr><td colspan="8" class="text-center py-12 text-gray-400 text-sm">กำลังโหลด...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="po-empty" class="hidden text-center py-16 text-gray-400">
+        <div class="text-4xl mb-3">📋</div>
+        <p class="font-semibold text-gray-500">ยังไม่มี PO ที่บันทึกไว้</p>
+        <p class="text-sm mt-1">กด "+ สร้าง PO ใหม่" เพื่อเริ่มต้น</p>
+      </div>
+    </div>
+
+  </div><!-- /tab-pos -->
+
+
+  <!-- ===== TAB: Maintain สินค้า Supplier ===== -->
+  <div id="tab-maintain" class="hidden space-y-5">
+
+    <!-- Supplier selector -->
+    <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-wrap items-end gap-4">
+      <div class="flex-1 min-w-[220px] max-w-[320px]">
+        <label class="block text-xs font-medium text-gray-600 mb-1.5">เลือก Supplier <span class="text-red-400">*</span></label>
+        <select id="mnt-supplier" onchange="loadSupplierProducts()"
+          class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+          <option value="">— เลือก Supplier —</option>
+        </select>
+      </div>
+      <button onclick="addMntProduct()"
+        class="px-4 py-2 bg-orange-400 hover:bg-orange-500 text-white text-sm font-semibold rounded-lg transition-colors">
+        + เพิ่มสินค้า
+      </button>
+      <button onclick="saveMntProducts()"
+        class="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-white text-sm font-semibold rounded-lg transition-colors">
+        💾 บันทึก
+      </button>
+    </div>
+
+    <!-- Products table -->
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2">
+        <span class="font-semibold text-gray-700 text-sm">รายการสินค้า</span>
+        <span id="mnt-supplier-label" class="text-xs text-orange-500 font-semibold">— กรุณาเลือก Supplier —</span>
+      </div>
+      <div id="mnt-product-area" class="p-5">
+        <div class="text-center py-12 text-gray-400 text-sm">เลือก Supplier เพื่อดูและแก้ไขรายการสินค้า</div>
+      </div>
+    </div>
+
+  </div><!-- /tab-maintain -->
+
+</main>
+
+
+<!-- ======================================================
+     MODAL: ดูรายละเอียด PO
+     ====================================================== -->
+<div id="view-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeViewModal()"></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+
+    <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+      <div>
+        <h2 id="vm-title" class="text-lg font-bold text-gray-800">—</h2>
+        <p id="vm-supplier" class="text-xs text-orange-500 font-semibold mt-0.5">—</p>
+      </div>
+      <button onclick="closeViewModal()" class="text-gray-400 hover:text-gray-700 text-xl font-bold leading-none">✕</button>
+    </div>
+
+    <div class="overflow-y-auto flex-1 px-6 py-5" id="vm-body"></div>
+
+    <div class="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex items-center justify-between gap-3 rounded-b-2xl">
+      <button id="vm-edit-btn" onclick="editPO()"
+        class="px-4 py-2 text-sm font-semibold text-white bg-indigo-500 hover:bg-indigo-600 rounded-lg transition-colors">
+        ✏ แก้ไข / พิมพ์
+      </button>
+      <div class="flex gap-3">
+        <button id="vm-delete-btn" onclick="deletePOConfirm()"
+          class="px-4 py-2 text-sm font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors">
+          ลบ PO นี้
+        </button>
+        <button onclick="closeViewModal()"
+          class="px-5 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+          ปิด
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<script src="js/config.js"></script>
+<script src="js/po-list.js"></script>
+</body>
+</html>

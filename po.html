@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PO สั่งซื้อ — Hi Solar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="css/index-theme.css">
+  <style>
+    * { box-sizing: border-box; }
+
+    /* ---- PO Document ---- */
+    .po-doc {
+      max-width: 900px;
+      margin: 24px auto;
+      background: white;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+      font-family: 'Segoe UI', 'Tahoma', 'Times New Roman', serif;
+      color: #333;
+    }
+
+    /* Compact header: logo | company | divider | title+meta */
+    .po-header {
+      display: grid;
+      grid-template-columns: 52px 1fr auto 200px;
+      gap: 0;
+      padding: 14px 28px;
+      border-bottom: 2.5px solid #d4af37;
+      background: #fafafa;
+      align-items: center;
+    }
+
+    .po-logo {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      margin-right: 12px;
+    }
+
+    .po-company { padding-right: 16px; }
+    .po-company h3 {
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #1a1a1a;
+      margin: 0 0 1px;
+      line-height: 1.3;
+    }
+    .po-company .co-th { font-size: 11px; color: #444; font-weight: 600; margin-bottom: 2px; }
+    .po-company .co-detail { font-size: 10px; line-height: 1.65; color: #666; }
+    .po-company .co-tax { font-size: 10px; color: #888; margin-top: 2px; }
+
+    .po-divider {
+      width: 1px;
+      background: #e0c86a;
+      align-self: stretch;
+      margin: 0 16px;
+    }
+
+    /* Right: PO title + meta stacked */
+    .po-right-title {
+      font-size: 16px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: #1a1a1a;
+      line-height: 1;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .po-right-sub {
+      font-size: 9px;
+      color: #bbb;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .po-meta-row {
+      display: grid;
+      grid-template-columns: 90px 1fr;
+      gap: 4px;
+      margin-bottom: 5px;
+      font-size: 10.5px;
+      align-items: baseline;
+    }
+    .po-meta-label { font-weight: 600; color: #888; }
+    .po-meta-val {
+      font-weight: 700;
+      color: #1a1a1a;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 1px;
+      min-height: 16px;
+      font-size: 11px;
+    }
+
+    .po-body { padding: 24px 32px; }
+
+    .sup-block { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb; }
+    .sup-block h4 {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #9ca3af;
+      margin-bottom: 6px;
+    }
+
+    /* Items Table */
+    .items-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }
+    .items-table thead { background: #d4af37; color: white; }
+    .items-table th {
+      padding: 9px 8px;
+      text-align: left;
+      font-weight: 700;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border: 1px solid #c9a127;
+    }
+    .items-table td { padding: 10px 8px; border: 1px solid #e5e7eb; vertical-align: middle; }
+    .items-table tbody tr:nth-child(even) { background: #fafafa; }
+
+    .item-name { font-weight: 600; color: #111; }
+    .item-desc { font-size: 11px; color: #888; margin-top: 3px; font-style: italic; }
+
+    .qty-wrap { display: flex; align-items: center; gap: 5px; justify-content: center; }
+    .qty-btn {
+      width: 24px; height: 24px;
+      border: 1px solid #ddd;
+      background: white;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+      line-height: 1;
+    }
+    .qty-btn:hover { background: #d4af37; border-color: #d4af37; color: white; }
+    .qty-input {
+      width: 50px;
+      text-align: center;
+      border: 1px solid #ddd;
+      padding: 4px 2px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .price-cell { text-align: right; font-weight: 600; color: #d4af37; }
+
+    /* Totals */
+    .totals-wrap { border-top: 2px solid #d4af37; padding-top: 12px; }
+    .total-row { display: flex; justify-content: flex-end; gap: 16px; margin-bottom: 7px; font-size: 13px; }
+    .total-label { font-weight: 600; color: #666; min-width: 190px; text-align: right; }
+    .total-val   { font-weight: 700; min-width: 120px; text-align: right; border-bottom: 1px solid #eee; padding-bottom: 3px; }
+    .grand-row {
+      display: flex; justify-content: flex-end; gap: 16px;
+      margin-top: 8px; padding: 10px 0;
+      border-top: 2px solid #d4af37;
+      border-bottom: 2px solid #d4af37;
+      font-size: 15px;
+    }
+    .grand-row .total-label { font-weight: 800; color: #111; text-transform: uppercase; letter-spacing: 0.3px; }
+    .grand-row .total-val   { font-weight: 800; font-size: 17px; color: #d4af37; border: none; }
+
+    /* Terms */
+    .terms-wrap { margin-top: 22px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
+    .terms-wrap h4 {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.7px; margin-bottom: 8px; color: #333;
+    }
+    .terms-list { font-size: 11px; line-height: 1.9; color: #666; list-style: none; }
+    .terms-list li { margin-bottom: 2px; padding-left: 14px; position: relative; }
+    .terms-list li:before { content: "→"; position: absolute; left: 0; color: #d4af37; font-weight: 700; }
+
+    /* Signatures */
+    .sig-section {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 40px; margin-top: 28px; padding-top: 22px;
+      border-top: 1px solid #e5e7eb;
+    }
+    .sig-block { text-align: center; }
+    .sig-role { font-size: 10px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 6px; }
+    .sig-images {
+      height: 90px; position: relative;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 8px;
+    }
+    .sig-stamp { height: 88px; width: auto; opacity: 0.85; position: absolute; }
+    .sig-sign  { height: 60px; width: auto; position: absolute; }
+    .sig-line  { border-top: 1px solid #555; padding-top: 6px; font-size: 11px; font-weight: 600; color: #333; margin: 0 20px; }
+    .sig-date  { font-size: 10px; color: #aaa; margin-top: 3px; }
+
+    .po-footer {
+      padding: 14px 28px; background: #f9f9f9;
+      border-top: 1px solid #e5e7eb;
+      text-align: center; font-size: 10px; color: #bbb;
+    }
+
+    /* ---- Print ---- */
+    @media print {
+      .no-print, nav, .ctrl-panel { display: none !important; }
+      body { background: white !important; padding: 0 !important; }
+      .po-wrap { padding: 0 !important; }
+      .po-doc   { box-shadow: none !important; margin: 0 !important; max-width: 100% !important; }
+      .qty-btn  { display: none !important; }
+      .qty-input { border: none !important; background: transparent !important; }
+      .no-items-msg { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<!-- ======== NAVBAR ======== -->
+<nav class="no-print hs-navbar bg-white border-b border-gray-200 px-6 py-3 flex items-center gap-6">
+  <span class="font-bold text-yellow-500 text-lg">☀ Hi Solar</span>
+  <a href="index.html"              class="nav-link text-sm text-gray-500 hover:text-gray-800">Dashboard</a>
+  <a href="internal-transfers.html" class="nav-link text-sm text-gray-500 hover:text-gray-800">โอนระหว่างบัญชี</a>
+  <a href="upload.html"             class="nav-link text-sm text-gray-500 hover:text-gray-800">Upload</a>
+  <a href="history.html"            class="nav-link text-sm text-gray-500 hover:text-gray-800">Upload Log</a>
+  <a href="maintain.html"           class="nav-link text-sm text-gray-500 hover:text-gray-800">ข้อมูลรายการ</a>
+  <a href="contacts.html"           class="nav-link text-sm text-gray-500 hover:text-gray-800">สมุดรายชื่อ</a>
+  <a href="po-list.html"            class="nav-link text-sm text-gray-500 hover:text-gray-800">รายการ PO</a>
+  <a href="po.html"                 class="nav-link is-active text-sm text-yellow-600 font-semibold border-b-2 border-yellow-400 pb-1">PO สั่งซื้อ</a>
+</nav>
+
+<!-- ======== CONTROLS PANEL ======== -->
+<div class="ctrl-panel no-print bg-white border-b border-gray-200 shadow-sm">
+  <div class="max-w-6xl mx-auto px-6 py-3">
+    <div class="flex flex-wrap gap-2 items-end">
+
+      <!-- Supplier -->
+      <div class="flex-1 min-w-[180px] max-w-[240px]">
+        <label class="block text-xs font-medium text-gray-500 mb-1">Supplier <span class="text-red-400">*</span></label>
+        <select id="ctrl-supplier" onchange="onSupplierChange()"
+          class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+          <option value="">— เลือก Supplier —</option>
+        </select>
+      </div>
+
+      <!-- PO Number -->
+      <div class="w-38">
+        <label class="block text-xs font-medium text-gray-500 mb-1">เลขที่ PO</label>
+        <input type="text" id="ctrl-po-number" oninput="syncPOFields()"
+          class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          placeholder="PO-202601-0001">
+      </div>
+
+      <!-- Order Date -->
+      <div class="w-36">
+        <label class="block text-xs font-medium text-gray-500 mb-1">วันที่สั่งซื้อ</label>
+        <input type="date" id="ctrl-order-date" oninput="syncPOFields()"
+          class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+      </div>
+
+      <!-- Payment Date -->
+      <div>
+        <label class="block text-xs font-medium text-gray-500 mb-1">วันที่ชำระเงิน</label>
+        <div class="flex gap-1 items-center">
+          <input type="date" id="ctrl-pay-date" oninput="syncPOFields()"
+            class="rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 w-34">
+          <button onclick="openPaymentModal()" title="เลือกจากรายการโอนเงิน"
+            class="px-2 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg border border-indigo-200 text-xs font-bold whitespace-nowrap transition-colors">
+            ↗
+          </button>
+        </div>
+      </div>
+
+      <!-- Reference -->
+      <div class="w-34">
+        <label class="block text-xs font-medium text-gray-500 mb-1">อ้างอิง QT/PO</label>
+        <input type="text" id="ctrl-ref" oninput="syncPOFields()"
+          class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          placeholder="QT2026xxxxxx">
+      </div>
+
+      <!-- VAT -->
+      <div class="w-26">
+        <label class="block text-xs font-medium text-gray-500 mb-1">VAT</label>
+        <select id="ctrl-vat" onchange="updateTotals()"
+          class="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400">
+          <option value="7">VAT 7%</option>
+          <option value="0">ไม่มี VAT</option>
+        </select>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-2 ml-auto">
+        <button onclick="openProductModal()"
+          class="flex items-center gap-1 px-3 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-600 text-sm font-semibold rounded-lg border border-orange-200 transition-colors">
+          ⚙ สินค้า
+        </button>
+        <button onclick="resetQtys()"
+          class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-semibold rounded-lg transition-colors">
+          รีเซ็ต
+        </button>
+        <button onclick="savePO()"
+          class="flex items-center gap-1 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors">
+          💾 บันทึก PO
+        </button>
+        <button onclick="window.print()"
+          class="flex items-center gap-1 px-4 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors">
+          🖨 พิมพ์
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ======== PO DOCUMENT ======== -->
+<div class="po-wrap py-5 px-4">
+<div class="po-doc" id="po-doc">
+
+  <!-- COMPACT HEADER: logo | company | | | title+meta -->
+  <div class="po-header">
+    <img src="images/Hi-Solar Small.png" alt="Hi Solar" class="po-logo" onerror="this.style.display='none'">
+
+    <div class="po-company">
+      <h3>HI SOLAR SUN ENERGY Co., Ltd.</h3>
+      <div class="co-th">บจก. ไฮโซลาร์ซันเอ็นเนอร์ยี่</div>
+      <div class="co-detail">
+        91 ถนนศรีภูมิ ต.ศรีภูมิ อ.เมือง จ.เชียงใหม่ 50200 สนง.ใหญ่<br>
+        โทร: +66 94 154 5595 &nbsp;|&nbsp; hisolarthai@gmail.com
+      </div>
+      <div class="co-tax">เลขประจำตัวผู้เสียภาษี: 0505564005690</div>
+    </div>
+
+    <div class="po-divider"></div>
+
+    <div class="po-right">
+      <div class="po-right-title">Purchase Order</div>
+      <div class="po-right-sub">ใบสั่งซื้อ</div>
+      <div class="po-meta-row">
+        <div class="po-meta-label">เลขที่ PO:</div>
+        <div class="po-meta-val" id="doc-po-number">—</div>
+      </div>
+      <div class="po-meta-row">
+        <div class="po-meta-label">วันที่สั่งซื้อ:</div>
+        <div class="po-meta-val" id="doc-order-date">—</div>
+      </div>
+      <div class="po-meta-row">
+        <div class="po-meta-label">วันที่ชำระ:</div>
+        <div class="po-meta-val" id="doc-pay-date">—</div>
+      </div>
+      <div class="po-meta-row">
+        <div class="po-meta-label">อ้างอิง:</div>
+        <div class="po-meta-val" id="doc-ref">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="po-body">
+
+    <!-- Supplier Block -->
+    <div class="sup-block">
+      <h4>ส่งเรียนถึง (To Supplier):</h4>
+      <div id="doc-supplier-info">
+        <span style="color:#bbb;font-size:13px;font-style:italic;">— กรุณาเลือก Supplier จากแถบควบคุมด้านบน —</span>
+      </div>
+    </div>
+
+    <!-- Items Table -->
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th style="width:4%;text-align:center;">#</th>
+          <th style="width:40%;">รายละเอียดสินค้า / Description</th>
+          <th style="width:13%;text-align:center;">จำนวน</th>
+          <th style="width:8%;text-align:center;">หน่วย</th>
+          <th style="width:15%;text-align:right;">ราคา/หน่วย (฿)</th>
+          <th style="width:15%;text-align:right;">รวม (฿)</th>
+          <th style="width:5%;" class="no-print"></th>
+        </tr>
+      </thead>
+      <tbody id="items-tbody">
+        <tr>
+          <td colspan="7" class="no-items-msg" style="text-align:center;padding:36px;color:#bbb;font-size:13px;">
+            กรุณาเลือก Supplier
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Totals -->
+    <div class="totals-wrap">
+      <div class="total-row">
+        <span class="total-label">ราคาก่อนภาษี (Subtotal):</span>
+        <span class="total-val" id="doc-subtotal">0.00</span>
+      </div>
+      <div class="total-row">
+        <span class="total-label" id="vat-label">ภาษีมูลค่าเพิ่ม (VAT 7%):</span>
+        <span class="total-val" id="doc-vat">0.00</span>
+      </div>
+      <div class="grand-row">
+        <span class="total-label">รวมทั้งสิ้น (Grand Total):</span>
+        <span class="total-val" id="doc-grand">0.00</span>
+      </div>
+    </div>
+
+    <!-- Terms -->
+    <div class="terms-wrap">
+      <h4>Terms &amp; Conditions — เงื่อนไขการสั่งซื้อ</h4>
+      <ul class="terms-list">
+        <li>ชำระเงิน T/T 100% โดยระบุเลขที่ PO นี้ในรายการโอนเงิน</li>
+        <li>ระยะเวลาจัดส่งสินค้า 3–5 วันทำการหลังจากได้รับการชำระเงิน</li>
+        <li>สินค้าต้องมาพร้อมใบส่งของ / Invoice ที่ระบุเลขที่ PO นี้</li>
+        <li>กรณีสินค้าชำรุดหรือไม่ตรงตามรายการ ขอสงวนสิทธิ์คืนสินค้าภายใน 7 วันนับจากวันรับสินค้า</li>
+        <li>ราคาตามใบสั่งซื้อนี้เป็นราคา รวม VAT 7% แล้ว</li>
+      </ul>
+    </div>
+
+    <!-- Signatures -->
+    <div class="sig-section">
+      <div class="sig-block">
+        <p class="sig-role">ผู้สั่งซื้อ (Authorized Buyer)</p>
+        <div class="sig-images">
+          <img src="images/ตรายาง HiSolar.png" class="sig-stamp" alt="ตรายาง"
+               onerror="this.style.display='none'">
+          <img src="images/ลายเซ็นต์ กรรมการ.png" class="sig-sign" alt="ลายเซ็นต์"
+               onerror="this.style.display='none'">
+        </div>
+        <div class="sig-line">Hi Solar Sun Energy</div>
+        <div class="sig-date" id="doc-sign-date">วันที่  .........................................</div>
+      </div>
+      <div class="sig-block">
+        <p class="sig-role">ผู้ขาย / ผู้รับมอบอำนาจ (Authorized Seller)</p>
+        <div class="sig-images"></div>
+        <div class="sig-line" id="doc-seller-line">................................................</div>
+        <div class="sig-date">วันที่  .........................................</div>
+      </div>
+    </div>
+  </div><!-- /po-body -->
+
+  <!-- FOOTER -->
+  <div class="po-footer">
+    <p>เอกสารนี้เป็นใบสั่งซื้ออย่างเป็นทางการจาก บจก. ไฮโซลาร์ซันเอ็นเนอร์ยี่ (HI SOLAR SUN ENERGY Co., Ltd.) — โปรดเก็บไว้เป็นหลักฐานอ้างอิง</p>
+    <p style="margin-top:3px;">This is an official Purchase Order. Please retain for reference. | เลขที่ผู้เสียภาษี 0505564005690</p>
+  </div>
+
+</div><!-- /po-doc -->
+</div><!-- /po-wrap -->
+
+
+<!-- ======================================================
+     MODAL: จัดการสินค้าประจำ Supplier
+     ====================================================== -->
+<div id="product-modal" class="no-print hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closeProductModal()"></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+
+    <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+      <div>
+        <h2 class="text-lg font-bold text-gray-800">⚙ จัดการสินค้าประจำ Supplier</h2>
+        <p id="pm-supplier-name" class="text-xs text-orange-500 font-semibold mt-0.5">—</p>
+      </div>
+      <button onclick="closeProductModal()" class="text-gray-400 hover:text-gray-700 text-xl font-bold leading-none">✕</button>
+    </div>
+
+    <div class="overflow-y-auto flex-1 px-6 py-4" id="pm-list"></div>
+
+    <div class="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex items-center justify-between gap-3 rounded-b-2xl">
+      <button onclick="addProductRow()"
+        class="px-4 py-2 text-sm bg-orange-400 hover:bg-orange-500 text-white font-semibold rounded-lg transition-colors">
+        + เพิ่มรายการ
+      </button>
+      <div class="flex gap-3">
+        <button onclick="closeProductModal()"
+          class="px-5 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+          ยกเลิก
+        </button>
+        <button onclick="saveProducts()"
+          class="px-5 py-2 text-sm font-semibold text-white bg-yellow-400 hover:bg-yellow-500 rounded-lg transition-colors">
+          บันทึก
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ======================================================
+     MODAL: อ้างอิงวันที่ชำระเงิน
+     ====================================================== -->
+<div id="pay-modal" class="no-print hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" onclick="closePaymentModal()"></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+
+    <div class="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+      <div>
+        <h2 class="text-lg font-bold text-gray-800">↗ อ้างอิงวันที่ชำระเงิน</h2>
+        <p class="text-xs text-gray-400 mt-0.5">รายการโอนเงินให้ Supplier จากฐานข้อมูล</p>
+      </div>
+      <button onclick="closePaymentModal()" class="text-gray-400 hover:text-gray-700 text-xl font-bold leading-none">✕</button>
+    </div>
+
+    <div class="overflow-y-auto flex-1 px-6 py-4" id="pay-list"></div>
+
+    <div class="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-end rounded-b-2xl">
+      <button onclick="closePaymentModal()"
+        class="px-5 py-2 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+        ปิด
+      </button>
+    </div>
+
+  </div>
+</div>
+
+
+<script src="js/config.js"></script>
+<script src="js/po.js"></script>
+</body>
+</html>
